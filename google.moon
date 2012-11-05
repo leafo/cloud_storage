@@ -4,6 +4,8 @@ url = require "socket.url"
 date = require "date"
 ltn12 = require "ltn12"
 
+import insert, concat from table
+
 class LOMFormatter
   find_node = (node, tag) ->
     for sub_node in *node
@@ -54,8 +56,9 @@ class CloudStorage
     }
     @formatter\format table.concat out
 
-  _get: (...) => @_request "GET", ...
-  _post: (...) => @_request "POST", ...
+
+  for m in *{"GET", "POST", "PUT", "DELETE", "HEAD"}
+    @__base["_#{m\lower!}"] = (...) => @_request m, ...
 
   get_service: => @_get "/"
 
