@@ -77,6 +77,7 @@ class Bucket
     "head_file"
     "put_file"
     "put_file_string"
+    "file_url"
   }
 
   new: (@bucket_name, @storage) =>
@@ -121,7 +122,7 @@ class CloudStorage
   bucket: (bucket) => Bucket bucket, @
 
   file_url: (bucket, key) =>
-    "http://http://commondatastorage.googleapis.com/#{bucket}/#{key}"
+    "http://commondatastorage.googleapis.com/#{bucket}/#{key}"
 
   for m in *{"GET", "POST", "PUT", "DELETE", "HEAD"}
     @__base["_#{m\lower!}"] = (...) => @_request m, ...
@@ -135,17 +136,18 @@ class CloudStorage
   put_file_string: (bucket, data, options={}) =>
     @_put "/#{bucket}/#{options.key or fname}", data, extend {
       "Content-length": #data
-      "Content-type": options.mimetype or mimetypes.guess fname
+      "Content-type": options.mimetype
       "x-goog-acl": options.acl or "public-read"
     }, options.headers
 
-  put_file: (bucket, fname, options) =>
+  put_file: (bucket, fname, options={}) =>
     data = if f = io.open fname
       with f\read "*a"
         f\close!
     else
       error "Failed to read file: #{fname}"
 
+    options.mimetype or= mimetypes.guess fname
     @put_file_string bucket, data, options
 
 { :CloudStorage, :Bucket }
