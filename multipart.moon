@@ -23,8 +23,17 @@ rand_string = (len) ->
     r
   string.char unpack shuffled
 
+-- multipart encodes params
+-- returns encoded string,boundary
+-- params is an a table of tuple tables:
+-- params = {
+--   {key1, value2},
+--   {key2, value2},
+-- }
 encode = (params) ->
-  chunks = for k, v in pairs params
+  chunks = for tuple in *params
+    k,v = unpack tuple
+
     k = url.escape k
     buffer = { 'Content-Disposition: form-data; name="'.. k .. '"' }
 
@@ -55,13 +64,15 @@ encode = (params) ->
    "\r\n", "--", boundary, "--", "\r\n"
   }), boundary
 
+encode_tbl = (params) ->
+  encode [{k,v} for k,v in pairs params]
 
 if "test" == ...
   http = require "socket.http"
   ltn12 = require "ltn12"
   out = {}
 
-  body, boundary = encode {
+  body, boundary = encode_tbl {
     wang: "bang"
     dad: "mad"
     f: File"hi.lua"
@@ -82,4 +93,4 @@ if "test" == ...
   -- END TEST
 
 
-{ :encode, :File }
+{ :encode, :encode_tbl, :File }
