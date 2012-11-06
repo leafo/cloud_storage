@@ -16,6 +16,12 @@ class OAuth
   auth_url: "https://accounts.google.com/o/oauth2/token"
   header: '{"alg":"RS256","typ":"JWT"}'
 
+  scope: {
+    read_only: "https://www.googleapis.com/auth/devstorage.read_only"
+    read_write: "https://www.googleapis.com/auth/devstorage.read_write"
+    full_control: "https://www.googleapis.com/auth/devstorage.full_control"
+  }
+
   new: (@client_email, @private_key) =>
 
   get_access_token: =>
@@ -45,7 +51,7 @@ class OAuth
     claims = json.encode {
       iss: client_email
       aud: @auth_url
-      scope: "https://www.googleapis.com/auth/devstorage.read_write"
+      scope: @scope.full_control
       iat: os.time!
       exp: os.time! + hr
     }

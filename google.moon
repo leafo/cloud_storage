@@ -4,31 +4,91 @@ url = require "socket.url"
 date = require "date"
 ltn12 = require "ltn12"
 
+mimetypes = require "mimetypes"
+
 import insert, concat from table
+
+extend = (t, ...) ->
+  for other in *{...}
+    if other != nil
+      t[k] = v for k,v in pairs other
+  t
 
 class LOMFormatter
   find_node = (node, tag) ->
-    for sub_node in *node
-      if sub_node.tag == tag
-        return sub_node
+    for child in *node
+      if child.tag == tag
+        return child
+
+  each_node = (node, tag) ->
+    coroutine.wrap ->
+      for child in *node
+        if child.tag == tag
+          coroutine.yield child
+
+  node_value = (node, tag) ->
+    child = find_node node, tag
+    child and child[1]
 
   new: =>
     @lom = require "lxp.lom"
 
-  format: (res) =>
+  format: (res, code, headers) =>
+    return code, headers if res == ""
+    return res if headers["x-goog-generation"]
+
     res = @lom.parse res
+    return nil, "Failed to parse result #{code}" if not res
+
     if @[res.tag]
       @[res.tag] @, res
     else
-      res
+      res, code
 
   "ListAllMyBucketsResult": (res) =>
     buckets_node = find_node res, "Buckets"
     return for bucket in *buckets_node
       {
-        name: find_node(bucket, "Name")[1]
-        creation_date: find_node(bucket, "CreationDate")[1]
+        name: node_value bucket, "Name"
+        creation_date: node_value bucket, "CreationDate"
       }
+
+  "ListBucketResult": (res) =>
+    return for node in each_node res, "Contents"
+      {
+        key: node_value node, "Key"
+        size: tonumber node_value node, "Size"
+        last_modified: node_value node, "LastModified"
+      }
+
+  "Error": (res) =>
+    {
+      error: true
+      message: node_value res, "Message"
+      code: node_value res, "Code"
+      details: node_value res, "Details"
+    }
+
+class Bucket
+  forward_methods = {
+    "get_bucket": "list"
+    "get_file"
+    "delete_file"
+    "head_file"
+    "put_file"
+    "put_file_string"
+  }
+
+  new: (@bucket_name, @storage) =>
+
+  for k,v in pairs forward_methods
+    name, self_name = if type(k) == "number"
+      v,v
+    else
+      k,v
+
+    @__base[self_name] = (...) =>
+      @storage[name] @storage, @bucket_name, ...
 
 class CloudStorage
   new: (@oauth, @project_id) =>
@@ -42,25 +102,51 @@ class CloudStorage
       "Date": date!\fmt "${http}"
     }
   
-  _request: (method="GET", path) =>
+  _request: (method="GET", path, data, headers) =>
     out = {}
-    https.request {
+    r = {
       url: url.build {
         scheme: "https"
         host: "storage.googleapis.com"
         path: path
       }
+      source: data and ltn12.source.string data
       method: method
-      headers: @_headers!
+      headers: extend @_headers!, headers
       sink: ltn12.sink.table out
     }
-    @formatter\format table.concat out
+    _, code, res_headers = https.request r
+    @formatter\format table.concat(out), code, res_headers
 
+  bucket: (bucket) => Bucket bucket, @
+
+  file_url: (bucket, key) =>
+    "http://http://commondatastorage.googleapis.com/#{bucket}/#{key}"
 
   for m in *{"GET", "POST", "PUT", "DELETE", "HEAD"}
     @__base["_#{m\lower!}"] = (...) => @_request m, ...
 
   get_service: => @_get "/"
+  get_bucket: (bucket) => @_get "/#{bucket}"
+  get_file: (bucket, key) => @_get "/#{bucket}/#{key}"
+  delete_file: (bucket, key) => @_delete "/#{bucket}/#{key}"
+  head_file: (bucket, key) => select 2, @_head "/#{bucket}/#{key}"
 
-{ :CloudStorage }
+  put_file_string: (bucket, data, options={}) =>
+    @_put "/#{bucket}/#{options.key or fname}", data, extend {
+      "Content-length": #data
+      "Content-type": options.mimetype or mimetypes.guess fname
+      "x-goog-acl": options.acl or "public-read"
+    }, options.headers
+
+  put_file: (bucket, fname, options) =>
+    data = if f = io.open fname
+      with f\read "*a"
+        f\close!
+    else
+      error "Failed to read file: #{fname}"
+
+    @put_file_string bucket, data, options
+
+{ :CloudStorage, :Bucket }
 
