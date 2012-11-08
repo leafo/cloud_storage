@@ -134,7 +134,7 @@ class CloudStorage
   head_file: (bucket, key) => select 2, @_head "/#{bucket}/#{key}"
 
   put_file_string: (bucket, data, options={}) =>
-    @_put "/#{bucket}/#{options.key or fname}", data, extend {
+    @_put "/#{bucket}/#{options.key}", data, extend {
       "Content-length": #data
       "Content-type": options.mimetype
       "x-goog-acl": options.acl or "public-read"
@@ -148,6 +148,7 @@ class CloudStorage
       error "Failed to read file: #{fname}"
 
     options.mimetype or= mimetypes.guess fname
+    options.key or= fname
     @put_file_string bucket, data, options
 
 { :CloudStorage, :Bucket }
