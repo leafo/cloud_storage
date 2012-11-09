@@ -17,6 +17,7 @@ dependencies = {
 	"lua-cjson",
 	"mimetypes",
 	"luacrypto",
+	"date",
 }
 
 build = {

@@ -44,6 +44,9 @@ class OAuth
     res = assert http.request @auth_url, req_params
     res = json.decode res
 
+    if res.error
+      error "Failed auth: #{res.error}"
+
     @expires_at = time + res.expires_in
     @access_token = res.access_token
     @access_token
