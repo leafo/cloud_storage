@@ -21,7 +21,7 @@ extend = function(t, ...)
 end
 local LOMFormatter
 do
-  local find_node, each_node, node_value
+  local find_node, filter_nodes, node_value
   local _parent_0 = nil
   local _base_0 = {
     format = function(self, res, code, headers)
@@ -65,7 +65,9 @@ do
       return (function()
         local _accum_0 = { }
         local _len_0 = 0
-        for node in each_node(res, "Contents") do
+        local _list_0 = filter_nodes(res, "Contents")
+        for _index_0 = 1, #_list_0 do
+          local node = _list_0[_index_0]
           local _value_0 = {
             key = node_value(node, "Key"),
             size = tonumber(node_value(node, "Size")),
@@ -125,16 +127,32 @@ do
       end
     end
   end
-  each_node = function(node, tag)
-    return coroutine.wrap(function()
+  filter_nodes = function(node, tag)
+    return (function()
+      local _accum_0 = { }
+      local _len_0 = 0
       local _list_0 = node
       for _index_0 = 1, #_list_0 do
-        local child = _list_0[_index_0]
-        if child.tag == tag then
-          coroutine.yield(child)
+        local _continue_0 = false
+        repeat
+          local child = _list_0[_index_0]
+          if not (child.tag == tag) then
+            _continue_0 = true
+            break
+          end
+          local _value_0 = child
+          if _value_0 ~= nil then
+            _len_0 = _len_0 + 1
+            _accum_0[_len_0] = _value_0
+          end
+          _continue_0 = true
+        until true
+        if not _continue_0 then
+          break
         end
       end
-    end)
+      return _accum_0
+    end)()
   end
   node_value = function(node, tag)
     local child = find_node(node, tag)

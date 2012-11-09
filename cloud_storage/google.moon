@@ -21,11 +21,10 @@ class LOMFormatter
       if child.tag == tag
         return child
 
-  each_node = (node, tag) ->
-    coroutine.wrap ->
-      for child in *node
-        if child.tag == tag
-          coroutine.yield child
+  filter_nodes = (node, tag) ->
+    return for child in *node
+      continue unless child.tag == tag
+      child
 
   node_value = (node, tag) ->
     child = find_node node, tag
@@ -55,7 +54,7 @@ class LOMFormatter
       }
 
   "ListBucketResult": (res) =>
-    return for node in each_node res, "Contents"
+    return for node in *filter_nodes res, "Contents"
       {
         key: node_value node, "Key"
         size: tonumber node_value node, "Size"

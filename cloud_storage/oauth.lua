@@ -46,6 +46,9 @@ do
       })
       local res = assert(http.request(self.auth_url, req_params))
       res = json.decode(res)
+      if res.error then
+        error("Failed auth: " .. tostring(res.error))
+      end
       self.expires_at = time + res.expires_in
       self.access_token = res.access_token
       return self.access_token
