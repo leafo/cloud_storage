@@ -15,6 +15,8 @@ dependencies = {
   "lua >= 5.1",
 	"luasocket",
 	"lua-cjson",
+	"mimetypes",
+	"luacrypto",
 }
 
 build = {
@@ -22,5 +24,6 @@ build = {
 	modules = {
 		["cloud_storage.oauth"] = "cloud_storage/oauth.lua",
 		["cloud_storage.google"] = "cloud_storage/google.lua",
+		["cloud_storage.http"] = "cloud_storage/http.lua",
 	}
 }

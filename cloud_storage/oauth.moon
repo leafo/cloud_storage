@@ -1,10 +1,10 @@
 url = require "socket.url"
 mime = require "mime"
-
 json = require "cjson"
+
 crypto = require "crypto"
 
-https = require "ssl.https"
+h = require"cloud_storage.http"
 
 param = (tbl) ->
   tuples = for k,v in pairs tbl
@@ -31,6 +31,8 @@ class OAuth
     @access_token
 
   refresh_access_token: =>
+    http = h.get!
+
     time = os.time!
     jwt = @_make_jwt @client_email, @private_key
 
@@ -39,7 +41,7 @@ class OAuth
       assertion: jwt
     }
 
-    res = assert https.request @auth_url, req_params
+    res = assert http.request @auth_url, req_params
     res = json.decode res
 
     @expires_at = time + res.expires_in

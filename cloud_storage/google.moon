@@ -1,10 +1,11 @@
 
-https = require "ssl.https"
 url = require "socket.url"
 date = require "date"
 ltn12 = require "ltn12"
 
 mimetypes = require "mimetypes"
+
+h = require "cloud_storage.http"
 
 import insert, concat from table
 
@@ -104,6 +105,8 @@ class CloudStorage
     }
   
   _request: (method="GET", path, data, headers) =>
+    http = h.get!
+
     out = {}
     r = {
       url: url.build {
@@ -116,7 +119,7 @@ class CloudStorage
       headers: extend @_headers!, headers
       sink: ltn12.sink.table out
     }
-    _, code, res_headers = https.request r
+    _, code, res_headers = http.request r
     @formatter\format table.concat(out), code, res_headers
 
   bucket: (bucket) => Bucket bucket, @
