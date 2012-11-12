@@ -2,7 +2,7 @@ package = "cloud_storage"
 version = "dev-1"
 
 source = {
-  url = "https://github.com/leafo/cloud_storage.git",
+  url = "git://github.com/leafo/cloud_storage.git",
 }
 
 description = {
