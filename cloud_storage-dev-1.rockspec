@@ -18,6 +18,7 @@ dependencies = {
 	"mimetypes",
 	"luacrypto",
 	"date",
+	"luaexpat",
 }
 
 build = {
