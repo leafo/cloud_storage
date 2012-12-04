@@ -24,8 +24,9 @@ dependencies = {
 build = {
 	type = "builtin",
 	modules = {
-		["cloud_storage.oauth"] = "cloud_storage/oauth.lua",
+		["cloud_storage.mock"] = "cloud_storage/mock.lua",
 		["cloud_storage.google"] = "cloud_storage/google.lua",
+		["cloud_storage.oauth"] = "cloud_storage/oauth.lua",
 		["cloud_storage.http"] = "cloud_storage/http.lua",
 	}
 }
