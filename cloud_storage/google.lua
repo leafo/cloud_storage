@@ -311,6 +311,9 @@ do
       return self:put_file_string(bucket, data, options)
     end,
     encode_and_sign_policy = function(self, expiration, conditions)
+      if type(expiration) == "number" then
+        expiration = os.date("!%Y-%m-%dT%H:%M:%SZ", expiration)
+      end
       local doc = mime.b64(json.encode({
         expiration = expiration,
         conditions = conditions

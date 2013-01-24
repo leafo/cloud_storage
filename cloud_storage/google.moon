@@ -169,6 +169,9 @@ class CloudStorage
     @put_file_string bucket, data, options
 
   encode_and_sign_policy: (expiration, conditions) =>
+    if type(expiration) == "number"
+      expiration = os.date "!%Y-%m-%dT%H:%M:%SZ", expiration
+
     doc = mime.b64 json.encode { :expiration, :conditions }
     doc, @oauth\sign_string doc
 
