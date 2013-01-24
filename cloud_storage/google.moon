@@ -2,6 +2,8 @@
 url = require "socket.url"
 date = require "date"
 ltn12 = require "ltn12"
+json = require "cjson"
+mime = require "mime"
 
 mimetypes = require "mimetypes"
 
@@ -92,6 +94,8 @@ class Bucket
       @storage[name] @storage, @bucket_name, ...
 
 class CloudStorage
+  url_prefix: "http://commondatastorage.googleapis.com"
+
   new: (@oauth, @project_id) =>
     @formatter = LOMFormatter!
 
@@ -124,7 +128,10 @@ class CloudStorage
   bucket: (bucket) => Bucket bucket, @
 
   file_url: (bucket, key) =>
-    "http://commondatastorage.googleapis.com/#{bucket}/#{key}"
+    @bucket_url(bucket) .. "/#{key}"
+
+  bucket_url: (bucket) =>
+    "#{@url_prefix}/#{bucket}"
 
   for m in *{"GET", "POST", "PUT", "DELETE", "HEAD"}
     @__base["_#{m\lower!}"] = (...) => @_request m, ...
@@ -152,6 +159,10 @@ class CloudStorage
     options.mimetype or= mimetypes.guess fname
     options.key or= fname
     @put_file_string bucket, data, options
+
+  encode_and_sign_policy: (expiration, conditions) =>
+    doc = mime.b64 json.encode { :expiration, :conditions }
+    doc, @oauth\sign_string doc
 
 { :CloudStorage, :Bucket }
 

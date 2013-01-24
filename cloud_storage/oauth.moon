@@ -15,6 +15,7 @@ param = (tbl) ->
 class OAuth
   auth_url: "https://accounts.google.com/o/oauth2/token"
   header: '{"alg":"RS256","typ":"JWT"}'
+  dtype: "sha256WithRSAEncryption"
 
   scope: {
     read_only: "https://www.googleapis.com/auth/devstorage.read_only"
@@ -22,7 +23,7 @@ class OAuth
     full_control: "https://www.googleapis.com/auth/devstorage.full_control"
   }
 
-  new: (@client_email, @private_key) =>
+  new: (@client_email, @private_key_file) =>
 
   get_access_token: =>
     if not @access_token or os.time! >= @expires_at
@@ -51,6 +52,13 @@ class OAuth
     @access_token = res.access_token
     @access_token
 
+  sign_string: (string) =>
+    (mime.b64 crypto.sign @dtype, string, @_private_key!)
+
+  _private_key: =>
+    with key = assert crypto.pkey.read @private_key_file, true
+      @_private_key = -> key
+
   _make_jwt: (client_email, private_key) =>
     hr = 60*60
     claims = json.encode {
@@ -62,12 +70,9 @@ class OAuth
     }
 
     sig_input = mime.b64(@header) .. "." .. mime.b64(claims)
+    signature = @sign_string sig_input
 
-    dtype = "sha256WithRSAEncryption"
-    private = assert crypto.pkey.read private_key, true
-
-    signature = crypto.sign dtype, sig_input, private
-    sig_input .. "." .. mime.b64(signature)
+    sig_input .. "." .. signature
 
 { :OAuth }
 

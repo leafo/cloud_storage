@@ -1,6 +1,8 @@
 local url = require("socket.url")
 local date = require("date")
 local ltn12 = require("ltn12")
+local json = require("cjson")
+local mime = require("mime")
 local mimetypes = require("mimetypes")
 local h = require("cloud_storage.http")
 local insert, concat = table.insert, table.concat
@@ -45,18 +47,15 @@ do
       local buckets_node = find_node(res, "Buckets")
       return (function()
         local _accum_0 = { }
-        local _len_0 = 0
+        local _len_0 = 1
         local _list_0 = buckets_node
         for _index_0 = 1, #_list_0 do
           local bucket = _list_0[_index_0]
-          local _value_0 = {
+          _accum_0[_len_0] = {
             name = node_value(bucket, "Name"),
             creation_date = node_value(bucket, "CreationDate")
           }
-          if _value_0 ~= nil then
-            _len_0 = _len_0 + 1
-            _accum_0[_len_0] = _value_0
-          end
+          _len_0 = _len_0 + 1
         end
         return _accum_0
       end)()
@@ -64,19 +63,16 @@ do
     ["ListBucketResult"] = function(self, res)
       return (function()
         local _accum_0 = { }
-        local _len_0 = 0
+        local _len_0 = 1
         local _list_0 = filter_nodes(res, "Contents")
         for _index_0 = 1, #_list_0 do
           local node = _list_0[_index_0]
-          local _value_0 = {
+          _accum_0[_len_0] = {
             key = node_value(node, "Key"),
             size = tonumber(node_value(node, "Size")),
             last_modified = node_value(node, "LastModified")
           }
-          if _value_0 ~= nil then
-            _len_0 = _len_0 + 1
-            _accum_0[_len_0] = _value_0
-          end
+          _len_0 = _len_0 + 1
         end
         return _accum_0
       end)()
@@ -130,7 +126,7 @@ do
   filter_nodes = function(node, tag)
     return (function()
       local _accum_0 = { }
-      local _len_0 = 0
+      local _len_0 = 1
       local _list_0 = node
       for _index_0 = 1, #_list_0 do
         local _continue_0 = false
@@ -141,10 +137,8 @@ do
             break
           end
           local _value_0 = child
-          if _value_0 ~= nil then
-            _len_0 = _len_0 + 1
-            _accum_0[_len_0] = _value_0
-          end
+          _accum_0[_len_0] = _value_0
+          _len_0 = _len_0 + 1
           _continue_0 = true
         until true
         if not _continue_0 then
@@ -225,6 +219,7 @@ local CloudStorage
 do
   local _parent_0 = nil
   local _base_0 = {
+    url_prefix = "http://commondatastorage.googleapis.com",
     _headers = function(self)
       return {
         ["x-goog-api-version"] = 2,
@@ -257,7 +252,10 @@ do
       return Bucket(bucket, self)
     end,
     file_url = function(self, bucket, key)
-      return "http://commondatastorage.googleapis.com/" .. tostring(bucket) .. "/" .. tostring(key)
+      return self:bucket_url(bucket) .. "/" .. tostring(key)
+    end,
+    bucket_url = function(self, bucket)
+      return tostring(self.url_prefix) .. "/" .. tostring(bucket)
     end,
     get_service = function(self)
       return self:_get("/")
@@ -304,6 +302,13 @@ do
       options.mimetype = options.mimetype or mimetypes.guess(fname)
       options.key = options.key or fname
       return self:put_file_string(bucket, data, options)
+    end,
+    encode_and_sign_policy = function(self, expiration, conditions)
+      local doc = mime.b64(json.encode({
+        expiration = expiration,
+        conditions = conditions
+      }))
+      return doc, self.oauth:sign_string(doc)
     end
   }
   _base_0.__index = _base_0

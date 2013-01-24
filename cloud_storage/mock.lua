@@ -46,15 +46,12 @@ do
       local files = execute(cmd)
       return (function()
         local _accum_0 = { }
-        local _len_0 = 0
+        local _len_0 = 1
         for file in files:gmatch("[^\n]+") do
-          local _value_0 = {
+          _accum_0[_len_0] = {
             key = file:match("/?(.*)")
           }
-          if _value_0 ~= nil then
-            _len_0 = _len_0 + 1
-            _accum_0[_len_0] = _value_0
-          end
+          _len_0 = _len_0 + 1
         end
         return _accum_0
       end)()

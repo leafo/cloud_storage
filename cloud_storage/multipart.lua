@@ -63,17 +63,15 @@ local rand_string
 rand_string = function(len)
   local shuffled = (function()
     local _accum_0 = { }
-    local _len_0 = 0
+    local _len_0 = 1
     for i = 1, len do
       local r = math.random(97, 122)
       if math.random() >= 0.5 then
         r = r - 32
       end
       local _value_0 = r
-      if _value_0 ~= nil then
-        _len_0 = _len_0 + 1
-        _accum_0[_len_0] = _value_0
-      end
+      _accum_0[_len_0] = _value_0
+      _len_0 = _len_0 + 1
     end
     return _accum_0
   end)()
@@ -83,7 +81,7 @@ local encode
 encode = function(params)
   local chunks = (function()
     local _accum_0 = { }
-    local _len_0 = 0
+    local _len_0 = 1
     local _list_0 = params
     for _index_0 = 1, #_list_0 do
       local tuple = _list_0[_index_0]
@@ -103,10 +101,8 @@ encode = function(params)
       insert(buffer, "")
       insert(buffer, content)
       local _value_0 = concat(buffer, "\r\n")
-      if _value_0 ~= nil then
-        _len_0 = _len_0 + 1
-        _accum_0[_len_0] = _value_0
-      end
+      _accum_0[_len_0] = _value_0
+      _len_0 = _len_0 + 1
     end
     return _accum_0
   end)()
@@ -154,13 +150,13 @@ local encode_tbl
 encode_tbl = function(params)
   return encode((function()
     local _accum_0 = { }
-    local _len_0 = 0
+    local _len_0 = 1
     for k, v in pairs(params) do
-      _len_0 = _len_0 + 1
       _accum_0[_len_0] = {
         k,
         v
       }
+      _len_0 = _len_0 + 1
     end
     return _accum_0
   end)())

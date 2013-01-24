@@ -7,13 +7,10 @@ local param
 param = function(tbl)
   local tuples = (function()
     local _accum_0 = { }
-    local _len_0 = 0
+    local _len_0 = 1
     for k, v in pairs(tbl) do
-      local _value_0 = tostring(url.escape(k)) .. "=" .. tostring(url.escape(v))
-      if _value_0 ~= nil then
-        _len_0 = _len_0 + 1
-        _accum_0[_len_0] = _value_0
-      end
+      _accum_0[_len_0] = tostring(url.escape(k)) .. "=" .. tostring(url.escape(v))
+      _len_0 = _len_0 + 1
     end
     return _accum_0
   end)()
@@ -25,6 +22,7 @@ do
   local _base_0 = {
     auth_url = "https://accounts.google.com/o/oauth2/token",
     header = '{"alg":"RS256","typ":"JWT"}',
+    dtype = "sha256WithRSAEncryption",
     scope = {
       read_only = "https://www.googleapis.com/auth/devstorage.read_only",
       read_write = "https://www.googleapis.com/auth/devstorage.read_write",
@@ -53,6 +51,19 @@ do
       self.access_token = res.access_token
       return self.access_token
     end,
+    sign_string = function(self, string)
+      return (mime.b64(crypto.sign(self.dtype, string, self:_private_key())))
+    end,
+    _private_key = function(self)
+      do
+        local _with_0 = assert(crypto.pkey.read(self.private_key_file, true))
+        local key = _with_0
+        self._private_key = function()
+          return key
+        end
+        return _with_0
+      end
+    end,
     _make_jwt = function(self, client_email, private_key)
       local hr = 60 * 60
       local claims = json.encode({
@@ -63,10 +74,8 @@ do
         exp = os.time() + hr
       })
       local sig_input = mime.b64(self.header) .. "." .. mime.b64(claims)
-      local dtype = "sha256WithRSAEncryption"
-      local private = assert(crypto.pkey.read(private_key, true))
-      local signature = crypto.sign(dtype, sig_input, private)
-      return sig_input .. "." .. mime.b64(signature)
+      local signature = self:sign_string(sig_input)
+      return sig_input .. "." .. signature
     end
   }
   _base_0.__index = _base_0
@@ -74,8 +83,8 @@ do
     setmetatable(_base_0, _parent_0.__base)
   end
   local _class_0 = setmetatable({
-    __init = function(self, client_email, private_key)
-      self.client_email, self.private_key = client_email, private_key
+    __init = function(self, client_email, private_key_file)
+      self.client_email, self.private_key_file = client_email, private_key_file
     end,
     __base = _base_0,
     __name = "OAuth",
