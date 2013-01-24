@@ -144,7 +144,8 @@ class CloudStorage
 
   -- sets predefined acl
   put_file_acl: (bucket, key, acl) =>
-    @_put "/#{bucket}/#{key}", nil, {
+    error "broken"
+    @_put "/#{bucket}/#{key}?acl", "", {
       "Content-length": 0
       "x-goog-acl": acl
     }
