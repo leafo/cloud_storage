@@ -171,5 +171,36 @@ class CloudStorage
     doc = mime.b64 json.encode { :expiration, :conditions }
     doc, @oauth\sign_string doc
 
+  -- expiration: unix timestamp in UTC
+  signed_url: (bucket, key, expiration) =>
+    path = "/#{bucket}/#{key}"
+    expiration = tostring expiration
+
+    str = concat {
+      "GET" -- verb
+      "" -- md5
+      "" -- content-type
+      expiration
+      "" -- trailing newline
+    }, "\n"
+
+    str ..= path
+
+    signature = @oauth\sign_string str
+
+    escape = (str) ->
+      (str\gsub "[/+]", {
+        "+": "%2B"
+        "/": "%2F"
+      })
+
+    (concat {
+      @url_prefix
+      path
+      "?GoogleAccessId=", @oauth.client_email
+      "&Expires=", expiration
+      "&Signature=", escape signature
+    }), str
+
 { :CloudStorage, :Bucket }
 

@@ -315,6 +315,36 @@ do
         conditions = conditions
       }))
       return doc, self.oauth:sign_string(doc)
+    end,
+    signed_url = function(self, bucket, key, expiration)
+      local path = "/" .. tostring(bucket) .. "/" .. tostring(key)
+      expiration = tostring(expiration)
+      local str = concat({
+        "GET",
+        "",
+        "",
+        expiration,
+        ""
+      }, "\n")
+      str = str .. path
+      local signature = self.oauth:sign_string(str)
+      local escape
+      escape = function(str)
+        return (str:gsub("[/+]", {
+          ["+"] = "%2B",
+          ["/"] = "%2F"
+        }))
+      end
+      return (concat({
+        self.url_prefix,
+        path,
+        "?GoogleAccessId=",
+        self.oauth.client_email,
+        "&Expires=",
+        expiration,
+        "&Signature=",
+        escape(signature)
+      })), str
     end
   }
   _base_0.__index = _base_0
