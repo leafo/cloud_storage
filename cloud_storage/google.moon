@@ -198,13 +198,13 @@ class CloudStorage
         "/": "%2F"
       })
 
-    (concat {
+    concat {
       @url_prefix
       path
       "?GoogleAccessId=", @oauth.client_email
       "&Expires=", expiration
       "&Signature=", escape signature
-    }), str
+    }
 
 { :CloudStorage, :Bucket }
 

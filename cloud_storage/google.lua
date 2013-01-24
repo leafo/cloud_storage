@@ -339,7 +339,7 @@ do
           ["/"] = "%2F"
         }))
       end
-      return (concat({
+      return concat({
         self.url_prefix,
         path,
         "?GoogleAccessId=",
@@ -348,7 +348,7 @@ do
         expiration,
         "&Signature=",
         escape(signature)
-      })), str
+      })
     end
   }
   _base_0.__index = _base_0
