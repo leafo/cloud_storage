@@ -272,6 +272,12 @@ do
     head_file = function(self, bucket, key)
       return select(2, self:_head("/" .. tostring(bucket) .. "/" .. tostring(key)))
     end,
+    put_file_acl = function(self, bucket, key, acl)
+      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(key), nil, {
+        ["Content-length"] = 0,
+        ["x-goog-acl"] = acl
+      })
+    end,
     put_file_string = function(self, bucket, data, options)
       if options == nil then
         options = { }

@@ -142,6 +142,13 @@ class CloudStorage
   delete_file: (bucket, key) => @_delete "/#{bucket}/#{key}"
   head_file: (bucket, key) => select 2, @_head "/#{bucket}/#{key}"
 
+  -- sets predefined acl
+  put_file_acl: (bucket, key, acl) =>
+    @_put "/#{bucket}/#{key}", nil, {
+      "Content-length": 0
+      "x-goog-acl": acl
+    }
+
   put_file_string: (bucket, data, options={}) =>
     @_put "/#{bucket}/#{options.key}", data, extend {
       "Content-length": #data
