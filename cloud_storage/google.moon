@@ -94,7 +94,7 @@ class Bucket
       @storage[name] @storage, @bucket_name, ...
 
 class CloudStorage
-  url_prefix: "http://commondatastorage.googleapis.com"
+  url_base: "commondatastorage.googleapis.com"
 
   new: (@oauth, @project_id) =>
     @formatter = LOMFormatter!
@@ -130,8 +130,12 @@ class CloudStorage
   file_url: (bucket, key) =>
     @bucket_url(bucket) .. "/#{key}"
 
-  bucket_url: (bucket) =>
-    "#{@url_prefix}/#{bucket}"
+  bucket_url: (bucket, opts) =>
+    scheme = opts.scheme or "http"
+    if opts.subdomain
+      "#{scheme}://#{bucket}.#{@url_base}"
+    else
+      "#{scheme}://#{@url_base}/#{bucket}"
 
   for m in *{"GET", "POST", "PUT", "DELETE", "HEAD"}
     @__base["_#{m\lower!}"] = (...) => @_request m, ...
@@ -199,7 +203,7 @@ class CloudStorage
       })
 
     concat {
-      @url_prefix
+      "http://#{@url_base}"
       path
       "?GoogleAccessId=", @oauth.client_email
       "&Expires=", expiration

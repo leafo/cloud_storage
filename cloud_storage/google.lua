@@ -219,7 +219,7 @@ local CloudStorage
 do
   local _parent_0 = nil
   local _base_0 = {
-    url_prefix = "http://commondatastorage.googleapis.com",
+    url_base = "commondatastorage.googleapis.com",
     _headers = function(self)
       return {
         ["x-goog-api-version"] = 2,
@@ -254,8 +254,13 @@ do
     file_url = function(self, bucket, key)
       return self:bucket_url(bucket) .. "/" .. tostring(key)
     end,
-    bucket_url = function(self, bucket)
-      return tostring(self.url_prefix) .. "/" .. tostring(bucket)
+    bucket_url = function(self, bucket, opts)
+      local scheme = opts.scheme or "http"
+      if opts.subdomain then
+        return tostring(scheme) .. "://" .. tostring(bucket) .. "." .. tostring(self.url_base)
+      else
+        return tostring(scheme) .. "://" .. tostring(self.url_base) .. "/" .. tostring(bucket)
+      end
     end,
     get_service = function(self)
       return self:_get("/")
@@ -340,7 +345,7 @@ do
         }))
       end
       return concat({
-        self.url_prefix,
+        "http://" .. tostring(self.url_base),
         path,
         "?GoogleAccessId=",
         self.oauth.client_email,
