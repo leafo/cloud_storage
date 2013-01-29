@@ -130,7 +130,7 @@ class CloudStorage
   file_url: (bucket, key) =>
     @bucket_url(bucket) .. "/#{key}"
 
-  bucket_url: (bucket, opts) =>
+  bucket_url: (bucket, opts={}) =>
     scheme = opts.scheme or "http"
     if opts.subdomain
       "#{scheme}://#{bucket}.#{@url_base}"

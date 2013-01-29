@@ -255,6 +255,9 @@ do
       return self:bucket_url(bucket) .. "/" .. tostring(key)
     end,
     bucket_url = function(self, bucket, opts)
+      if opts == nil then
+        opts = { }
+      end
       local scheme = opts.scheme or "http"
       if opts.subdomain then
         return tostring(scheme) .. "://" .. tostring(bucket) .. "." .. tostring(self.url_base)
