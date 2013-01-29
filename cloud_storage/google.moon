@@ -144,7 +144,7 @@ class CloudStorage
   get_bucket: (bucket) => @_get "/#{bucket}"
   get_file: (bucket, key) => @_get "/#{bucket}/#{key}"
   delete_file: (bucket, key) => @_delete "/#{bucket}/#{key}"
-  head_file: (bucket, key) => select 2, @_head "/#{bucket}/#{key}"
+  head_file: (bucket, key) => @_head "/#{bucket}/#{key}"
 
   -- sets predefined acl
   put_file_acl: (bucket, key, acl) =>
