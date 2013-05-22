@@ -31,11 +31,12 @@ with the password which seems to be hard coded to `notasecret`.
 
 Download the private key, it's a `.p12` file. In order to use it we need to
 convert it to a `.pem`. Run the following command (replacing `key.p12` and
-`key.pem` with the input filename and desired output filename):
+`key.pem` with the input filename and desired output filename). Enter
+`notasecret` for the password.
 
-    ```bash
-    openssl pkcs12 -in key.p12 -out key.pem -nodes -clcerts
-    ```
+```bash
+openssl pkcs12 -in key.p12 -out key.pem -nodes -clcerts
+```
 
 We'll need one more piece of information, the service account email address.
 It's of the form `111111111111@developer.gserviceaccount.com` where
@@ -48,19 +49,19 @@ Now we're ready to write some code. Let's write a simple application that lists
 the contents of a bucket. Remember, you must have access to the bucket. You can
 create a new bucket from the APIs console if you don't already have one.
 
-    ```lua
-    local oauth = require "cloud_storage.oauth"
+```lua
+local oauth = require "cloud_storage.oauth"
 
-    -- replace with your service account email address
-    o = oauth.OAuth("111111111111@developer.gserviceaccount.com", "path/to/key.pem")
+-- replace with your service account email address
+o = oauth.OAuth("111111111111@developer.gserviceaccount.com", "path/to/key.pem")
 
-    local google = require "cloud_storage.google"
+local google = require "cloud_storage.google"
 
-    -- use your project id as the second argument, same number in service account email
-    local storage = google.CloudStorage(o, "111111111111")
+-- use your project id as the second argument, same number in service account email
+local storage = google.CloudStorage(o, "111111111111")
 
-    local files = storage:get_bucket("my_bucket")
-    ```
+local files = storage:get_bucket("my_bucket")
+```
 
 ## Reference
 
@@ -69,9 +70,9 @@ create a new bucket from the APIs console if you don't already have one.
 Handles OAuth authenticated requests. You must create an OAuth object that will
 be used with the cloud storage API.
 
-    ```lua
-    local oauth = require "cloud_storage.oauth"
-    ```
+```lua
+local oauth = require "cloud_storage.oauth"
+```
 
 #### `ouath_instance = oauth.OAuth(service_email, path_to_private key)`
 
@@ -81,15 +82,15 @@ Create a new OAuth object.
 
 Communicates with the Google cloud storage API.
 
-    ```lua
-    local google = require "cloud_storage.google"
-    ```
+```lua
+local google = require "cloud_storage.google"
+```
 
 #### `storage = oauth.CloudStorage(ouath_instance, project_id)`
 
-    ```lua
-    local storage = google.CloudStorage(o, "111111111111")
-    ```
+```lua
+local storage = google.CloudStorage(o, "111111111111")
+```
 
 #### `storage:get_service()`
 
@@ -117,6 +118,10 @@ Reads `fname` from disk and uploads it. The key of the file will be the name of
 the file unless `opts.key` is provided. The mimetype of the file is guessed
 based on the extension unless `opts.mimetype` is provided.
 
+```lua
+storage:put_file("my_bucket", "source.lua", { mimetype = "text/lua" })
+```
+
 #### `storage:put_file_string(bucket, data, opts={})`
 
 Uploads the string `data` to the bucket. `opts.key` must be provided, and will
@@ -126,10 +131,22 @@ be the key of the file in the bucket. Other options include:
  * `opts.acl`: sets the `x-goog-acl` header for file, defaults to `public-read`
  * `opts.headers`: an optional array table of any additional headers to send
 
+```lua
+storage:put_file_string("my_bucket", "hello world!", {
+  key = "message.txt",
+  mimetype = "text/plain",
+  acl = "private"
+})
+```
+
 #### `storage:signed_url(bucket, key, expiration)`
 
 Creates a temporarily URL for downloading an object regardless of it's ACL.
 `expiration` is a unix timestamp in the future, like one generated from
 `os.time()`.
+
+```lua
+print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
+```
 
   [0]: https://developers.google.com/storage/docs/accesscontrol
