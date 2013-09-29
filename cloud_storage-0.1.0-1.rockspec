@@ -1,8 +1,9 @@
 package = "cloud_storage"
-version = "dev-1"
+version = "0.1.0-1"
 
 source = {
   url = "git://github.com/leafo/cloud_storage.git",
+  branch = "v0.1.0",
 }
 
 description = {
