@@ -299,6 +299,10 @@ do
       return doc, self.oauth:sign_string(doc)
     end,
     signed_url = function(self, bucket, key, expiration)
+      key = key:gsub("[%[%]]", {
+        ["["] = "%5B",
+        ["]"] = "%5D"
+      })
       local path = "/" .. tostring(bucket) .. "/" .. tostring(key)
       expiration = tostring(expiration)
       local str = concat({
