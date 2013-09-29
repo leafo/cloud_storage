@@ -13,7 +13,7 @@ First head to the APIs console, <https://code.google.com/apis/console/>. Enable
 cloud storage if you haven't done so already. You may also need to enter
 billing information.
 
-Now navigate to **Api Access** and click the big button "Create an OAuth 2.0
+Now navigate to **API Access** and click the big button "Create an OAuth 2.0
 client ID".
 
 ![API Access](http://leafo.net/shotsnb/2013-05-21_23-58-04.png)
@@ -74,7 +74,7 @@ be used with the cloud storage API.
 local oauth = require "cloud_storage.oauth"
 ```
 
-#### `ouath_instance = oauth.OAuth(service_email, path_to_private key)`
+#### `ouath_instance = oauth.OAuth(service_email, path_to_private_key)`
 
 Create a new OAuth object.
 
