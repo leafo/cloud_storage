@@ -5,20 +5,20 @@ local crypto = require("crypto")
 local h = require("cloud_storage.http")
 local param
 param = function(tbl)
-  local tuples = (function()
+  local tuples
+  do
     local _accum_0 = { }
     local _len_0 = 1
     for k, v in pairs(tbl) do
       _accum_0[_len_0] = tostring(url.escape(k)) .. "=" .. tostring(url.escape(v))
       _len_0 = _len_0 + 1
     end
-    return _accum_0
-  end)()
+    tuples = _accum_0
+  end
   return table.concat(tuples, "&")
 end
 local OAuth
 do
-  local _parent_0 = nil
   local _base_0 = {
     auth_url = "https://accounts.google.com/o/oauth2/token",
     header = '{"alg":"RS256","typ":"JWT"}',
@@ -56,12 +56,11 @@ do
     end,
     _private_key = function(self)
       do
-        local _with_0 = assert(crypto.pkey.read(self.private_key_file, true))
-        local key = _with_0
+        local key = assert(crypto.pkey.read(self.private_key_file, true))
         self._private_key = function()
           return key
         end
-        return _with_0
+        return key
       end
     end,
     _make_jwt = function(self, client_email, private_key)
@@ -79,25 +78,14 @@ do
     end
   }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self, client_email, private_key_file)
       self.client_email, self.private_key_file = client_email, private_key_file
     end,
     __base = _base_0,
-    __name = "OAuth",
-    __parent = _parent_0
+    __name = "OAuth"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -105,9 +93,6 @@ do
     end
   })
   _base_0.__class = _class_0
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
   OAuth = _class_0
 end
 return {

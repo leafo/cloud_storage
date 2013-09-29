@@ -1,15 +1,18 @@
 local mimetypes = require("mimetypes")
 local url = require("socket.url")
-local insert, concat = table.insert, table.concat
+local insert, concat
+do
+  local _obj_0 = table
+  insert, concat = _obj_0.insert, _obj_0.concat
+end
 math.randomseed(os.time())
 local type
 do
-  local _table_0 = require("moon")
-  type = _table_0.type
+  local _obj_0 = require("moon")
+  type = _obj_0.type
 end
 local File
 do
-  local _parent_0 = nil
   local _base_0 = {
     mime = function(self)
       return mimetypes.guess(self.fname)
@@ -28,25 +31,14 @@ do
     end
   }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self, fname)
       self.fname = fname
     end,
     __base = _base_0,
-    __name = "File",
-    __parent = _parent_0
+    __name = "File"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -54,14 +46,12 @@ do
     end
   })
   _base_0.__class = _class_0
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
   File = _class_0
 end
 local rand_string
 rand_string = function(len)
-  local shuffled = (function()
+  local shuffled
+  do
     local _accum_0 = { }
     local _len_0 = 1
     for i = 1, len do
@@ -73,18 +63,18 @@ rand_string = function(len)
       _accum_0[_len_0] = _value_0
       _len_0 = _len_0 + 1
     end
-    return _accum_0
-  end)()
+    shuffled = _accum_0
+  end
   return string.char(unpack(shuffled))
 end
 local encode
 encode = function(params)
-  local chunks = (function()
+  local chunks
+  do
     local _accum_0 = { }
     local _len_0 = 1
-    local _list_0 = params
-    for _index_0 = 1, #_list_0 do
-      local tuple = _list_0[_index_0]
+    for _index_0 = 1, #params do
+      local tuple = params[_index_0]
       local k, v = unpack(tuple)
       k = url.escape(k)
       local buffer = {
@@ -104,16 +94,15 @@ encode = function(params)
       _accum_0[_len_0] = _value_0
       _len_0 = _len_0 + 1
     end
-    return _accum_0
-  end)()
+    chunks = _accum_0
+  end
   local boundary
   while true do
     boundary = "Boundary" .. tostring(rand_string(16))
-    local _list_0 = chunks
-    for _index_0 = 1, #_list_0 do
+    for _index_0 = 1, #chunks do
       local _continue_0 = false
       repeat
-        local c = _list_0[_index_0]
+        local c = chunks[_index_0]
         if c:find(boundary) then
           _continue_0 = true
           break

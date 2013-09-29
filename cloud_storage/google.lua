@@ -5,7 +5,11 @@ local json = require("cjson")
 local mime = require("mime")
 local mimetypes = require("mimetypes")
 local h = require("cloud_storage.http")
-local insert, concat = table.insert, table.concat
+local insert, concat
+do
+  local _obj_0 = table
+  insert, concat = _obj_0.insert, _obj_0.concat
+end
 local extend
 extend = function(t, ...)
   local _list_0 = {
@@ -24,7 +28,6 @@ end
 local LOMFormatter
 do
   local find_node, filter_nodes, node_value
-  local _parent_0 = nil
   local _base_0 = {
     format = function(self, res, code, headers)
       if res == "" then
@@ -48,9 +51,8 @@ do
       return (function()
         local _accum_0 = { }
         local _len_0 = 1
-        local _list_0 = buckets_node
-        for _index_0 = 1, #_list_0 do
-          local bucket = _list_0[_index_0]
+        for _index_0 = 1, #buckets_node do
+          local bucket = buckets_node[_index_0]
           _accum_0[_len_0] = {
             name = node_value(bucket, "Name"),
             creation_date = node_value(bucket, "CreationDate")
@@ -87,25 +89,14 @@ do
     end
   }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self)
       self.lom = require("lxp.lom")
     end,
     __base = _base_0,
-    __name = "LOMFormatter",
-    __parent = _parent_0
+    __name = "LOMFormatter"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -115,9 +106,8 @@ do
   _base_0.__class = _class_0
   local self = _class_0
   find_node = function(node, tag)
-    local _list_0 = node
-    for _index_0 = 1, #_list_0 do
-      local child = _list_0[_index_0]
+    for _index_0 = 1, #node do
+      local child = node[_index_0]
       if child.tag == tag then
         return child
       end
@@ -127,11 +117,10 @@ do
     return (function()
       local _accum_0 = { }
       local _len_0 = 1
-      local _list_0 = node
-      for _index_0 = 1, #_list_0 do
+      for _index_0 = 1, #node do
         local _continue_0 = false
         repeat
-          local child = _list_0[_index_0]
+          local child = node[_index_0]
           if not (child.tag == tag) then
             _continue_0 = true
             break
@@ -152,36 +141,21 @@ do
     local child = find_node(node, tag)
     return child and child[1]
   end
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
   LOMFormatter = _class_0
 end
 local Bucket
 do
   local forward_methods
-  local _parent_0 = nil
   local _base_0 = { }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self, bucket_name, storage)
       self.bucket_name, self.storage = bucket_name, storage
     end,
     __base = _base_0,
-    __name = "Bucket",
-    __parent = _parent_0
+    __name = "Bucket"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -210,14 +184,10 @@ do
       return self.storage[name](self.storage, self.bucket_name, ...)
     end
   end
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
   Bucket = _class_0
 end
 local CloudStorage
 do
-  local _parent_0 = nil
   local _base_0 = {
     url_base = "commondatastorage.googleapis.com",
     _headers = function(self)
@@ -360,26 +330,15 @@ do
     end
   }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self, oauth, project_id)
       self.oauth, self.project_id = oauth, project_id
       self.formatter = LOMFormatter()
     end,
     __base = _base_0,
-    __name = "CloudStorage",
-    __parent = _parent_0
+    __name = "CloudStorage"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -400,9 +359,6 @@ do
     self.__base["_" .. tostring(m:lower())] = function(self, ...)
       return self:_request(m, ...)
     end
-  end
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
   end
   CloudStorage = _class_0
 end

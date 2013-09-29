@@ -1,7 +1,7 @@
 local Bucket
 do
-  local _table_0 = require("cloud_storage.google")
-  Bucket = _table_0.Bucket
+  local _obj_0 = require("cloud_storage.google")
+  Bucket = _obj_0.Bucket
 end
 local execute
 execute = function(cmd)
@@ -12,7 +12,6 @@ execute = function(cmd)
 end
 local MockStorage
 do
-  local _parent_0 = nil
   local _base_0 = {
     bucket = function(self, bucket)
       return Bucket(bucket, self)
@@ -105,9 +104,6 @@ do
     end
   }
   _base_0.__index = _base_0
-  if _parent_0 then
-    setmetatable(_base_0, _parent_0.__base)
-  end
   local _class_0 = setmetatable({
     __init = function(self, dir_name, url_prefix)
       if dir_name == nil then
@@ -119,17 +115,9 @@ do
       self.dir_name, self.url_prefix = dir_name, url_prefix
     end,
     __base = _base_0,
-    __name = "MockStorage",
-    __parent = _parent_0
+    __name = "MockStorage"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil and _parent_0 then
-        return _parent_0[name]
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -137,9 +125,6 @@ do
     end
   })
   _base_0.__class = _class_0
-  if _parent_0 and _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
   MockStorage = _class_0
 end
 if ... == "test" then
