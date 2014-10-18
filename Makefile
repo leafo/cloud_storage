@@ -8,3 +8,7 @@ local: build
 %.pem: %.p12
 	openssl pkcs12 -in $< -out $@ -nodes -clcerts
 
+
+%.rsa.pem: %.p12
+	openssl pkcs12 -nodes -nocerts -in $< | openssl rsa -out $@ 
+
