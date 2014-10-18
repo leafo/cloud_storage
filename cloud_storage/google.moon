@@ -181,10 +181,11 @@ class CloudStorage
 
   -- expiration: unix timestamp in UTC
   signed_url: (bucket, key, expiration) =>
-    -- firefox chokes on [ ] in urls so we handle them ahead of time here
-    key = key\gsub "[%[%]]", {
+    -- fix characters that some browsers might choke on
+    key = key\gsub "[%[%]#]", {
       "[": "%5B"
       "]": "%5D"
+      "#": "%23"
     }
 
     path = "/#{bucket}/#{key}"

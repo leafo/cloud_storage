@@ -1,8 +1,5 @@
 local Bucket
-do
-  local _obj_0 = require("cloud_storage.google")
-  Bucket = _obj_0.Bucket
-end
+Bucket = require("cloud_storage.google").Bucket
 local execute
 execute = function(cmd)
   local proc = io.popen(cmd)

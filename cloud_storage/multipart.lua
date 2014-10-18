@@ -7,10 +7,7 @@ do
 end
 math.randomseed(os.time())
 local type
-do
-  local _obj_0 = require("moon")
-  type = _obj_0.type
-end
+type = require("moon").type
 local File
 do
   local _base_0 = {
