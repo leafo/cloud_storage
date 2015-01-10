@@ -35,3 +35,8 @@ describe "cloud_storage", ->
       assert.falsy url\find "#", 1, true
       assert.falsy url\find "]", 1, true
       assert.falsy url\find "[", 1, true
+
+    it "should encode even more chars", ->
+      import url_encode_key from require "cloud_storage.google"
+      assert.same [[%21_@_$_%5E_%2A_%28_%29_+_=_%5D_%5B_\_/_._,_%27_%22_%25]],
+        url_encode_key [[!_@_$_^_*_(_)_+_=_]_[_\_/_._,_'_"_%]]

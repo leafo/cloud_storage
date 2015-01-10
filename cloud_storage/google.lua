@@ -10,6 +10,12 @@ do
   local _obj_0 = table
   insert, concat = _obj_0.insert, _obj_0.concat
 end
+local url_encode_key
+url_encode_key = function(key)
+  return (key:gsub([==[[%[%]#!%^%*%(%)"'%%]]==], function(c)
+    return "%" .. tostring(("%x"):format(c:byte()):upper())
+  end))
+end
 local extend
 extend = function(t, ...)
   local _list_0 = {
@@ -299,11 +305,7 @@ do
       return doc, self.oauth:sign_string(doc)
     end,
     signed_url = function(self, bucket, key, expiration)
-      key = key:gsub("[%[%]#]", {
-        ["["] = "%5B",
-        ["]"] = "%5D",
-        ["#"] = "%23"
-      })
+      key = url_encode_key(key)
       local path = "/" .. tostring(bucket) .. "/" .. tostring(key)
       expiration = tostring(expiration)
       local str = concat({
@@ -369,5 +371,6 @@ do
 end
 return {
   CloudStorage = CloudStorage,
-  Bucket = Bucket
+  Bucket = Bucket,
+  url_encode_key = url_encode_key
 }

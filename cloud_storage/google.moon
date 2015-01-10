@@ -11,6 +11,10 @@ h = require "cloud_storage.http"
 
 import insert, concat from table
 
+url_encode_key = (key) ->
+  (key\gsub [==[[%[%]#!%^%*%(%)"'%%]]==], (c) ->
+    "%#{"%x"\format(c\byte!)\upper!}")
+
 extend = (t, ...) ->
   for other in *{...}
     if other != nil
@@ -181,12 +185,7 @@ class CloudStorage
 
   -- expiration: unix timestamp in UTC
   signed_url: (bucket, key, expiration) =>
-    -- fix characters that some browsers might choke on
-    key = key\gsub "[%[%]#]", {
-      "[": "%5B"
-      "]": "%5D"
-      "#": "%23"
-    }
+    key = url_encode_key key
 
     path = "/#{bucket}/#{key}"
     expiration = tostring expiration
@@ -217,5 +216,4 @@ class CloudStorage
       "&Signature=", escape signature
     }
 
-{ :CloudStorage, :Bucket }
-
+{ :CloudStorage, :Bucket, :url_encode_key }
