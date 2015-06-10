@@ -334,6 +334,69 @@ do
         "&Signature=",
         escape(signature)
       })
+    end,
+    upload_url = function(self, bucket, key, opts)
+      if opts == nil then
+        opts = { }
+      end
+      local content_disposition, filename, acl, success_action_redirect, expires, size_limit
+      content_disposition, filename, acl, success_action_redirect, expires, size_limit = opts.content_disposition, opts.filename, opts.acl, opts.success_action_redirect, opts.expires, opts.size_limit
+      expires = expires or (os.time() + 60 ^ 2)
+      acl = acl or "project-private"
+      if filename then
+        content_disposition = content_disposition or "attachment"
+        local filename_quoted = filename:gsub('"', "\\%1")
+        content_disposition = content_disposition .. "; filename=\"" .. tostring(filename_quoted) .. "\""
+      end
+      local policy = { }
+      insert(policy, {
+        acl = acl
+      })
+      insert(policy, {
+        bucket = bucket
+      })
+      insert(policy, {
+        "eq",
+        "$key",
+        key
+      })
+      if content_disposition then
+        insert(policy, {
+          "eq",
+          "$Content-Disposition",
+          content_disposition
+        })
+      end
+      if size_limit then
+        insert(policy, {
+          "content-length-range",
+          0,
+          size_limit
+        })
+      end
+      if success_action_redirect then
+        insert(policy, {
+          success_action_redirect = success_action_redirect
+        })
+      end
+      local signature
+      policy, signature = self:encode_and_sign_policy(expires, policy)
+      local action = self:bucket_url(bucket, {
+        subdomain = true
+      })
+      if not (opts.https == false) then
+        action = action:gsub("http:", "https:") or action
+      end
+      local params = {
+        acl = acl,
+        policy = policy,
+        signature = signature,
+        key = key,
+        success_action_redirect = success_action_redirect,
+        ["Content-Disposition"] = content_disposition,
+        GoogleAccessId = self.oauth.client_email
+      }
+      return action, params
     end
   }
   _base_0.__index = _base_0

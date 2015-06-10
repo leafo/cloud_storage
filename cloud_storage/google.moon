@@ -216,4 +216,50 @@ class CloudStorage
       "&Signature=", escape signature
     }
 
+  upload_url: (bucket, key, opts={}) =>
+    {
+      :content_disposition, :filename, :acl, :success_action_redirect,
+      :expires, :size_limit
+    } = opts
+
+    expires or= os.time! + 60^2
+    acl or= "project-private"
+
+    if filename
+      content_disposition or= "attachment"
+      filename_quoted = filename\gsub '"', "\\%1"
+      content_disposition ..= "; filename=\"#{filename_quoted}\""
+
+    policy = {}
+    insert policy, { :acl }
+    insert policy, { :bucket }
+    insert policy, {"eq", "$key", key}
+
+    if content_disposition
+      insert policy, {"eq", "$Content-Disposition", content_disposition}
+
+    if size_limit
+      insert policy, {"content-length-range", 0, size_limit}
+
+    if success_action_redirect
+      insert policy, { :success_action_redirect }
+
+    policy, signature = @encode_and_sign_policy expires, policy
+
+    action = @bucket_url bucket, subdomain: true
+
+    unless opts.https == false
+      action = action\gsub("http:", "https:") or action
+
+    params = {
+      :acl, :policy, :signature, :key
+      :success_action_redirect
+
+      "Content-Disposition": content_disposition
+      GoogleAccessId: @oauth.client_email
+    }
+
+    action, params
+
+
 { :CloudStorage, :Bucket, :url_encode_key }
