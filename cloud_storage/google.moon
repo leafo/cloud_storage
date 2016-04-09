@@ -177,7 +177,7 @@ class CloudStorage
     @put_file_string bucket, data, options
 
   start_resumable_upload: (bucket, options={}) =>
-    @_post "/#{bucket}", "", extend {
+    @_post "/#{bucket}/#{options.key}", "", extend {
       "Content-type": options.mimetype
       "Content-length": 0
       "x-goog-acl": options.acl or "public-read"

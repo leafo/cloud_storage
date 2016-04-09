@@ -301,7 +301,7 @@ do
       if options == nil then
         options = { }
       end
-      return self:_post("/" .. tostring(bucket), "", extend({
+      return self:_post("/" .. tostring(bucket) .. "/" .. tostring(options.key), "", extend({
         ["Content-type"] = options.mimetype,
         ["Content-length"] = 0,
         ["x-goog-acl"] = options.acl or "public-read",
