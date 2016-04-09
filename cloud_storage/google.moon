@@ -176,6 +176,14 @@ class CloudStorage
     options.key or= fname
     @put_file_string bucket, data, options
 
+  start_resumable_upload: (bucket, options={}) =>
+    @_post "/#{bucket}", "", extend {
+      "Content-type": options.mimetype
+      "Content-length": 0
+      "x-goog-acl": options.acl or "public-read"
+      "x-goog-resumable": "start"
+    }, options.headers
+
   encode_and_sign_policy: (expiration, conditions) =>
     if type(expiration) == "number"
       expiration = os.date "!%Y-%m-%dT%H:%M:%SZ", expiration

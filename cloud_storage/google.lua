@@ -33,6 +33,7 @@ extend = function(t, ...)
 end
 local LOMFormatter
 do
+  local _class_0
   local find_node, filter_nodes, node_value
   local _base_0 = {
     format = function(self, res, code, headers)
@@ -95,7 +96,7 @@ do
     end
   }
   _base_0.__index = _base_0
-  local _class_0 = setmetatable({
+  _class_0 = setmetatable({
     __init = function(self)
       self.lom = require("lxp.lom")
     end,
@@ -151,10 +152,11 @@ do
 end
 local Bucket
 do
+  local _class_0
   local forward_methods
   local _base_0 = { }
   _base_0.__index = _base_0
-  local _class_0 = setmetatable({
+  _class_0 = setmetatable({
     __init = function(self, bucket_name, storage)
       self.bucket_name, self.storage = bucket_name, storage
     end,
@@ -194,6 +196,7 @@ do
 end
 local CloudStorage
 do
+  local _class_0
   local _base_0 = {
     url_base = "commondatastorage.googleapis.com",
     _headers = function(self)
@@ -293,6 +296,17 @@ do
       options.mimetype = options.mimetype or mimetypes.guess(fname)
       options.key = options.key or fname
       return self:put_file_string(bucket, data, options)
+    end,
+    start_resumable_upload = function(self, bucket, options)
+      if options == nil then
+        options = { }
+      end
+      return self:_post("/" .. tostring(bucket), "", extend({
+        ["Content-type"] = options.mimetype,
+        ["Content-length"] = 0,
+        ["x-goog-acl"] = options.acl or "public-read",
+        ["x-goog-resumable"] = "start"
+      }, options.headers))
     end,
     encode_and_sign_policy = function(self, expiration, conditions)
       if type(expiration) == "number" then
@@ -400,7 +414,7 @@ do
     end
   }
   _base_0.__index = _base_0
-  local _class_0 = setmetatable({
+  _class_0 = setmetatable({
     __init = function(self, oauth, project_id)
       self.oauth, self.project_id = oauth, project_id
       self.formatter = LOMFormatter()
