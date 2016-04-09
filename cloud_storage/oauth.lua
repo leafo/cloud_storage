@@ -19,6 +19,7 @@ param = function(tbl)
 end
 local OAuth
 do
+  local _class_0
   local _base_0 = {
     auth_url = "https://accounts.google.com/o/oauth2/token",
     header = '{"alg":"RS256","typ":"JWT"}',
@@ -78,7 +79,7 @@ do
     end
   }
   _base_0.__index = _base_0
-  local _class_0 = setmetatable({
+  _class_0 = setmetatable({
     __init = function(self, client_email, private_key_file)
       self.client_email, self.private_key_file = client_email, private_key_file
     end,

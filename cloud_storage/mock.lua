@@ -9,6 +9,7 @@ execute = function(cmd)
 end
 local MockStorage
 do
+  local _class_0
   local _base_0 = {
     bucket = function(self, bucket)
       return Bucket(bucket, self)
@@ -101,7 +102,7 @@ do
     end
   }
   _base_0.__index = _base_0
-  local _class_0 = setmetatable({
+  _class_0 = setmetatable({
     __init = function(self, dir_name, url_prefix)
       if dir_name == nil then
         dir_name = "."
