@@ -17,7 +17,6 @@ describe "cloud_storage", ->
     it "should make jwt", ->
       assert.truthy o\_make_jwt o.client_email, o.private_key
 
-
   describe "with storage", ->
     local storage
 
@@ -40,3 +39,14 @@ describe "cloud_storage", ->
       import url_encode_key from require "cloud_storage.google"
       assert.same [[%21_@_$_%5E_%2A_%28_%29_+_=_%5D_%5B_\_/_._,_%27_%22_%25]],
         url_encode_key [[!_@_$_^_*_(_)_+_=_]_[_\_/_._,_'_"_%]]
+
+    it "should canonicalize headers", ->
+      headers = {}
+      headers["x-goog-acl"] = "project-private"
+      headers["x-goog-meta-hello"] = "hella\nhelli"
+      headers["x-goog-encryption-key"] = "best"
+      headers["x-goog-encryption-key-sha256"] = "dad"
+      headers["Content-Disposition"] = "attachment"
+      headers["Content-Length"] = 0
+      assert.same "x-goog-acl:project-private\nx-goog-meta-hello:hella helli", storage\canonicalize_headers headers
+

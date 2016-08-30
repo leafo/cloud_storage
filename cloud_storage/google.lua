@@ -308,6 +308,48 @@ do
         ["x-goog-resumable"] = "start"
       }, options.headers))
     end,
+    canonicalize_headers = function(self, headers)
+      local header_pairs
+      do
+        local _accum_0 = { }
+        local _len_0 = 1
+        for k, v in pairs(headers) do
+          _accum_0[_len_0] = {
+            k:lower(),
+            v
+          }
+          _len_0 = _len_0 + 1
+        end
+        header_pairs = _accum_0
+      end
+      do
+        local _accum_0 = { }
+        local _len_0 = 1
+        for _index_0 = 1, #header_pairs do
+          local e = header_pairs[_index_0]
+          if (e[1]:match("x%-goog.*") and not e[1]:match("x%-goog%-encryption%-key.*")) then
+            _accum_0[_len_0] = e
+            _len_0 = _len_0 + 1
+          end
+        end
+        header_pairs = _accum_0
+      end
+      table.sort(header_pairs, function(a, b)
+        return a[1] < b[1]
+      end)
+      local values
+      do
+        local _accum_0 = { }
+        local _len_0 = 1
+        for _index_0 = 1, #header_pairs do
+          local e = header_pairs[_index_0]
+          _accum_0[_len_0] = e[1] .. ":" .. e[2]:gsub("\r?\n", " ")
+          _len_0 = _len_0 + 1
+        end
+        values = _accum_0
+      end
+      return concat(values, "\n")
+    end,
     encode_and_sign_policy = function(self, expiration, conditions)
       if type(expiration) == "number" then
         expiration = os.date("!%Y-%m-%dT%H:%M:%SZ", expiration)
@@ -318,17 +360,25 @@ do
       }))
       return doc, self.oauth:sign_string(doc)
     end,
-    signed_url = function(self, bucket, key, expiration)
+    signed_url = function(self, bucket, key, expiration, opts)
+      if opts == nil then
+        opts = { }
+      end
       key = url_encode_key(key)
       local path = "/" .. tostring(bucket) .. "/" .. tostring(key)
       expiration = tostring(expiration)
-      local str = concat({
-        "GET",
+      local verb = opts.verb or "GET"
+      local elements = {
+        verb,
         "",
         "",
-        expiration,
-        ""
-      }, "\n")
+        expiration
+      }
+      if opts.headers and next(opts.headers) then
+        table.insert(elements, self:canonicalize_headers(opts.headers))
+      end
+      table.insert(elements, "")
+      local str = concat(elements, "\n")
       str = str .. path
       local signature = self.oauth:sign_string(str)
       local escape
