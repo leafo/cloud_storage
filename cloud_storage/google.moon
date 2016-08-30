@@ -184,6 +184,17 @@ class CloudStorage
       "x-goog-resumable": "start"
     }, options.headers
 
+  canonicalize_headers: (headers) =>
+    header_pairs = [{k\lower!,v} for k, v in pairs headers]
+    -- only count custom headers (x-goog), omit secret encryption headers
+    header_pairs = [e for e in *header_pairs when (e[1]\match("x%-goog.*") and not e[1]\match("x%-goog%-encryption%-key.*"))]
+
+    table.sort header_pairs, (a, b) ->
+      a[1] < b[1]
+    -- replace folding whitespace with spaces
+    values = [e[1] .. ":" .. e[2]\gsub("\r?\n", " ") for e in *header_pairs]
+    return concat values, "\n"
+
   encode_and_sign_policy: (expiration, conditions) =>
     if type(expiration) == "number"
       expiration = os.date "!%Y-%m-%dT%H:%M:%SZ", expiration
@@ -192,20 +203,28 @@ class CloudStorage
     doc, @oauth\sign_string doc
 
   -- expiration: unix timestamp in UTC
-  signed_url: (bucket, key, expiration) =>
+  signed_url: (bucket, key, expiration, opts={}) =>
     key = url_encode_key key
 
     path = "/#{bucket}/#{key}"
     expiration = tostring expiration
 
-    str = concat {
-      "GET" -- verb
+    verb = opts.verb or "GET"
+
+    elements = {
+      verb
       "" -- md5
       "" -- content-type
       expiration
-      "" -- trailing newline
-    }, "\n"
+    }
 
+    -- 'As Needed', not required
+    if opts.headers and next opts.headers
+      table.insert elements, @canonicalize_headers(opts.headers)
+
+    table.insert elements, "" -- trailing newline
+
+    str = concat elements, "\n"
     str ..= path
 
     signature = @oauth\sign_string str
