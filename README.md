@@ -26,7 +26,7 @@ service account** button and click it.
 Choose `P12` for the key type.
 
 Now you'll be given download access to the newly created private key, along
-with the password which seems to be hard coded to `notasecret`.
+with the password which is hard coded to `notasecret`.
 
 ![x](http://leafo.net/shotsnb/2016-08-30_23-56-12.png)
 
@@ -40,9 +40,8 @@ openssl pkcs12 -in key.p12 -out key.pem -nodes -clcerts
 ```
 
 We'll need one more piece of information, the service account email address.
-You'll find it labeled **Service account ID** on the service account list.
-
-![x](http://leafo.net/shotsnb/2013-05-22_00-07-18.png)
+You'll find it labeled **Service account ID** on the service account list. It
+might look something like `cloud-storage@my-project.iam.gserviceaccount.com`.
 
 Now we're ready to write some code. Let's write a simple application that lists
 the contents of a bucket. Remember, you must have access to the bucket. You can
