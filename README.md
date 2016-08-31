@@ -1,33 +1,34 @@
 # `cloud_storage`
 
+[![Build Status](https://travis-ci.org/leafo/cloud_storage.svg?branch=master)](https://travis-ci.org/leafo/cloud_storage)
+
 A library for connecting to [Google Cloud Storage](https://cloud.google.com/products/cloud-storage) through Lua.
 
 ## Tutorial
 
-Communicating with Google Cloud Storage is done using what Google calls a
-service account. You need to create a new service account and download the
-private key that is generated with it. It's described in detail on [this
-page][0] but here's a quicker tutorial focused on this library:
+You can learn more about authenicating with Google Cloud Storage here:
+<https://cloud.google.com/storage/docs/authentication>. Here's a quick guide on
+getting started:
 
-First head to the APIs console, <https://code.google.com/apis/console/>. Enable
-cloud storage if you haven't done so already. You may also need to enter
+The easiest way use this library is to create a service account for your
+project. You'll need to download a private key store it alongside your
+configuration.
+
+Go to the APIs console, <https://console.developers.google.com>. Enable
+Cloud Storage if you haven't done so already. You may also need to enter
 billing information.
 
-Now navigate to **API Access** and click the big button "Create an OAuth 2.0
-client ID".
+Navigate to **Service accounts**, located on the sidebar. Find the **Create
+service account** button and click it.
 
-![API Access](http://leafo.net/shotsnb/2013-05-21_23-58-04.png)
+![Service accounts](http://leafo.net/shotsnb/2016-08-30_23-54-13.png)
 
-
-Follow the dialog, when you get to **Application type** make sure to select
-**Service account**:
-
-![x](http://leafo.net/shotsnb/2013-05-21_23-58-53.png)
+Choose `P12` for the key type.
 
 Now you'll be given download access to the newly created private key, along
 with the password which seems to be hard coded to `notasecret`.
 
-![x](http://leafo.net/shotsnb/2013-05-22_00-00-05.png)
+![x](http://leafo.net/shotsnb/2016-08-30_23-56-12.png)
 
 Download the private key, it's a `.p12` file. In order to use it we need to
 convert it to a `.pem`. Run the following command (replacing `key.p12` and
@@ -39,26 +40,24 @@ openssl pkcs12 -in key.p12 -out key.pem -nodes -clcerts
 ```
 
 We'll need one more piece of information, the service account email address.
-It's of the form `111111111111@developer.gserviceaccount.com` where
-111111111111 is your project id. You can find it on the page where you created
-your service account:
+You'll find it labeled **Service account ID** on the service account list.
 
 ![x](http://leafo.net/shotsnb/2013-05-22_00-07-18.png)
 
 Now we're ready to write some code. Let's write a simple application that lists
 the contents of a bucket. Remember, you must have access to the bucket. You can
-create a new bucket from the APIs console if you don't already have one.
+create a new bucket from the console if you don't already have one.
 
 ```lua
 local oauth = require "cloud_storage.oauth"
 
--- replace with your service account email address
-o = oauth.OAuth("111111111111@developer.gserviceaccount.com", "path/to/key.pem")
+-- replace with your service account ID
+o = oauth.OAuth("cloud-storage@my-project.iam.gserviceaccount.com", "path/to/key.pem")
 
 local google = require "cloud_storage.google"
 
--- use your project id as the second argument, same number in service account email
-local storage = google.CloudStorage(o, "111111111111")
+-- use your id as the second argument, everything before the @ in your service account ID
+local storage = google.CloudStorage(o, "cloud-storage")
 
 local files = storage:get_bucket("my_bucket")
 ```
