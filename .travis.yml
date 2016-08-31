@@ -20,10 +20,6 @@ install:
   - luarocks install moonscript
   - luarocks make
 
-before_script:
-  - createdb -U postgres lapis_test
-  - mysql -e 'create database lapis_test;'
-
 script: 
   - busted
 
