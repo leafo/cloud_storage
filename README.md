@@ -92,23 +92,23 @@ local storage = google.CloudStorage(o, "111111111111")
 
 #### `storage:get_service()`
 
-<https://developers.google.com/storage/docs/reference-methods#getservice>
+<https://cloud.google.com/storage/docs/xml-api/get-service>
 
 #### `storage:get_bucket(bucket)`
 
-<https://developers.google.com/storage/docs/reference-methods#getbucket>
+<https://cloud.google.com/storage/docs/xml-api/get-bucket>
 
 #### `storage:get_file(bucket, key)`
 
-<https://developers.google.com/storage/docs/reference-methods#getobject>
+<https://cloud.google.com/storage/docs/xml-api/get-object>
 
 #### `storage:delete_file(bucket, key)`
 
-<https://developers.google.com/storage/docs/reference-methods#deleteobject>
+<https://cloud.google.com/storage/docs/xml-api/delete-object>
 
 #### `storage:head_file(bucket, key)`
 
-<https://developers.google.com/storage/docs/reference-methods#headobject>
+<https://cloud.google.com/storage/docs/xml-api/head-object>
 
 #### `storage:put_file(bucket, fname, opts={})`
 
