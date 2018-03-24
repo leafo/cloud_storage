@@ -297,6 +297,16 @@ do
       options.key = options.key or fname
       return self:put_file_string(bucket, data, options)
     end,
+    copy_file = function(self, source_bucket, source_key, dest_bucket, dest_key, options)
+      if options == nil then
+        options = { }
+      end
+      return self:_put("/" .. tostring(dest_bucket) .. "/" .. tostring(dest_key), "", extend({
+        ["Content-length"] = "0",
+        ["x-goog-copy-source"] = "/" .. tostring(source_bucket) .. "/" .. tostring(source_key),
+        ["x-goog-acl"] = options.acl or "public-read"
+      }, options.headers))
+    end,
     start_resumable_upload = function(self, bucket, options)
       if options == nil then
         options = { }

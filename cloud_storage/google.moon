@@ -176,6 +176,13 @@ class CloudStorage
     options.key or= fname
     @put_file_string bucket, data, options
 
+  copy_file: (source_bucket, source_key, dest_bucket, dest_key, options={}) =>
+    @_put "/#{dest_bucket}/#{dest_key}", "", extend {
+      "Content-length": "0"
+      "x-goog-copy-source": "/#{source_bucket}/#{source_key}"
+      "x-goog-acl": options.acl or "public-read"
+    }, options.headers
+
   start_resumable_upload: (bucket, options={}) =>
     @_post "/#{bucket}/#{options.key}", "", extend {
       "Content-type": options.mimetype
