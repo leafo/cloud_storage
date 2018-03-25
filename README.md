@@ -63,6 +63,12 @@ local files = storage:get_bucket("my_bucket")
 
 ## Reference
 
+### Error handling for storage methods
+
+Any methods that fail to execute will return `nil`, an error message, and an
+object that represents the error. Successful responses will return a Lua table
+containing the details of the operation.
+
 ### cloud_storage.oauth
 
 Handles OAuth authenticated requests. You must create an OAuth object that will
