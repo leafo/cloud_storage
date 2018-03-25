@@ -163,8 +163,15 @@ class CloudStorage
       "x-goog-acl": acl
     }
 
-  put_file_string: (bucket, data, options={}) =>
-    @_put "/#{bucket}/#{options.key}", data, extend {
+  put_file_string: (bucket, key, data, options={}) =>
+    assert not options.key, "key is not an option, but an argument"
+    if type(data) == "table"
+      error "put_file_string interface has changed: key is now the second argument"
+
+    assert key, "missing key"
+    assert type(data) == "string", "expected string for data"
+
+    @_put "/#{bucket}/#{key}", data, extend {
       "Content-length": #data
       "Content-type": options.mimetype
       "x-goog-acl": options.acl or "public-read"
@@ -178,8 +185,8 @@ class CloudStorage
       error "Failed to read file: #{fname}"
 
     options.mimetype or= mimetypes.guess fname
-    options.key or= fname
-    @put_file_string bucket, data, options
+    key = options.key or fname
+    @put_file_string bucket, key, data, options
 
   copy_file: (source_bucket, source_key, dest_bucket, dest_key, options={}) =>
     @_put "/#{dest_bucket}/#{dest_key}", "", extend {

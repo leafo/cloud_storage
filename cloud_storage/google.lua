@@ -272,11 +272,17 @@ do
         ["x-goog-acl"] = acl
       })
     end,
-    put_file_string = function(self, bucket, data, options)
+    put_file_string = function(self, bucket, key, data, options)
       if options == nil then
         options = { }
       end
-      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(options.key), data, extend({
+      assert(not options.key, "key is not an option, but an argument")
+      if type(data) == "table" then
+        error("put_file_string interface has changed: key is now the second argument")
+      end
+      assert(key, "missing key")
+      assert(type(data) == "string", "expected string for data")
+      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(key), data, extend({
         ["Content-length"] = #data,
         ["Content-type"] = options.mimetype,
         ["x-goog-acl"] = options.acl or "public-read"
@@ -300,8 +306,8 @@ do
         end
       end
       options.mimetype = options.mimetype or mimetypes.guess(fname)
-      options.key = options.key or fname
-      return self:put_file_string(bucket, data, options)
+      local key = options.key or fname
+      return self:put_file_string(bucket, key, data, options)
     end,
     copy_file = function(self, source_bucket, source_key, dest_bucket, dest_key, options)
       if options == nil then

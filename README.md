@@ -84,7 +84,7 @@ Communicates with the Google cloud storage API.
 local google = require "cloud_storage.google"
 ```
 
-### Error handling
+#### Error handling
 
 Any methods that fail to execute will return `nil`, an error message, and an
 object that represents the error. Successful responses will return a Lua table
@@ -132,21 +132,28 @@ the file unless `opts.key` is provided. The mimetype of the file is guessed
 based on the extension unless `opts.mimetype` is provided.
 
 ```lua
-storage:put_file("my_bucket", "source.lua", { mimetype = "text/lua" })
+storage:put_file("my_bucket", "source.lua", {
+  mimetype = "text/lua"
+})
 ```
 
-#### `storage:put_file_string(bucket, data, opts={})`
+All the same options from `put_file_string` are available for this method.
 
-Uploads the string `data` to the bucket. `opts.key` must be provided, and will
-be the key of the file in the bucket. Other options include:
+#### `storage:put_file_string(bucket, key, data, opts={})`
 
- * `opts.mimetype`: sets `Content-type` header for the file, defaults to not being set
- * `opts.acl`: sets the `x-goog-acl` header for file, defaults to `public-read`
- * `opts.headers`: an optional array table of any additional headers to send
+> **Note:** this API previously had `key` as an option but it was moved to
+> second argument
+
+Uploads the string `data` to the bucket at the specified key.
+
+Options include:
+
+ * `mimetype`: sets `Content-type` header for the file, defaults to not being set
+ * `acl`: sets the `x-goog-acl` header for file, defaults to `public-read`
+ * `headers`: an optional array table of any additional headers to send
 
 ```lua
-storage:put_file_string("my_bucket", "hello world!", {
-  key = "message.txt",
+storage:put_file_string("my_bucket", "message.txt", "hello world!", {
   mimetype = "text/plain",
   acl = "private"
 })
