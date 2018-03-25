@@ -62,7 +62,7 @@ class MockStorage
 
 
 if ... == "test"
-  require "moon"
+  moon = require "moon"
   s = MockStorage("test_storage", "static")
 
   print s\_full_path "dad_bucket", "eat/my/sucks"

@@ -126,7 +126,7 @@ do
   MockStorage = _class_0
 end
 if ... == "test" then
-  require("moon")
+  local moon = require("moon")
   local s = MockStorage("test_storage", "static")
   print(s:_full_path("dad_bucket", "eat/my/sucks"))
   print(MockStorage():_full_path("nobucket", "hello.world"))

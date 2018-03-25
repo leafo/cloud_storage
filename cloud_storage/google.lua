@@ -31,6 +31,39 @@ extend = function(t, ...)
   end
   return t
 end
+local xml_escape
+do
+  local punct = "[%^$()%.%[%]*+%-?]"
+  local escape_patt
+  escape_patt = function(str)
+    return (str:gsub(punct, function(p)
+      return "%" .. p
+    end))
+  end
+  local xml_escape_entities = {
+    ['&'] = '&amp;',
+    ['<'] = '&lt;',
+    ['>'] = '&gt;',
+    ['"'] = '&quot;',
+    ["'"] = '&#039;'
+  }
+  local xml_unescape_entities = { }
+  for key, value in pairs(xml_escape_entities) do
+    xml_unescape_entities[value] = key
+  end
+  local xml_escape_pattern = "[" .. concat((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for char in pairs(xml_escape_entities) do
+      _accum_0[_len_0] = escape_patt(char)
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)()) .. "]"
+  xml_escape = function(text)
+    return (text:gsub(xml_escape_pattern, xml_escape_entities))
+  end
+end
 local LOMFormatter
 do
   local _class_0
@@ -199,6 +232,7 @@ do
   local _class_0
   local _base_0 = {
     url_base = "commondatastorage.googleapis.com",
+    api_base = "storage.googleapis.com",
     _headers = function(self)
       return {
         ["x-goog-api-version"] = 2,
@@ -214,11 +248,7 @@ do
       local http = h.get()
       local out = { }
       local r = {
-        url = url.build({
-          scheme = "https",
-          host = "storage.googleapis.com",
-          path = path
-        }),
+        url = "https://" .. tostring(self.api_base) .. tostring(path),
         source = data and ltn12.source.string(data),
         method = method,
         headers = extend(self:_headers(), headers),
@@ -257,17 +287,16 @@ do
       return self:_get("/" .. tostring(bucket))
     end,
     get_file = function(self, bucket, key)
-      return self:_get("/" .. tostring(bucket) .. "/" .. tostring(key))
+      return self:_get("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
     end,
     delete_file = function(self, bucket, key)
-      return self:_delete("/" .. tostring(bucket) .. "/" .. tostring(key))
+      return self:_delete("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
     end,
     head_file = function(self, bucket, key)
-      return self:_head("/" .. tostring(bucket) .. "/" .. tostring(key))
+      return self:_head("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
     end,
     put_file_acl = function(self, bucket, key, acl)
-      error("broken")
-      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(key) .. "?acl", "", {
+      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)) .. "?acl", "", {
         ["Content-length"] = 0,
         ["x-goog-acl"] = acl
       })
@@ -313,17 +342,56 @@ do
       if options == nil then
         options = { }
       end
-      return self:_put("/" .. tostring(dest_bucket) .. "/" .. tostring(dest_key), "", extend({
+      return self:_put("/" .. tostring(dest_bucket) .. "/" .. tostring(url.escape(dest_key)), "", extend({
         ["Content-length"] = "0",
         ["x-goog-copy-source"] = "/" .. tostring(source_bucket) .. "/" .. tostring(source_key),
         ["x-goog-acl"] = options.acl or "public-read"
+      }, options.headers))
+    end,
+    compose = function(self, bucket, key, source_keys, options)
+      if options == nil then
+        options = { }
+      end
+      assert(type(source_keys) == "table" and next(source_keys), "invalid source keys")
+      local payload_buffer = {
+        "<ComposeRequest>"
+      }
+      for _index_0 = 1, #source_keys do
+        local key_obj = source_keys[_index_0]
+        local name, generation, if_generation_match
+        if type(key_obj) == "table" then
+          local _ = {
+            name = name,
+            generation = generation,
+            if_generation_match = if_generation_match
+          }
+        else
+          name = key_obj
+        end
+        assert(name, "missing source key name for compose")
+        table.insert(payload_buffer, "<Component>")
+        table.insert(payload_buffer, "<Name>" .. tostring(xml_escape(name)) .. "</Name>")
+        if generation then
+          table.insert(payload_buffer, "<Generation>" .. tostring(xml_escape(generation)) .. "</Generation>")
+        end
+        if if_generation_match then
+          table.insert(payload_buffer, "<IfGenerationMatch>" .. tostring(xml_escape(if_generation_match)) .. "</IfGenerationMatch>")
+        end
+        table.insert(payload_buffer, "</Component>")
+      end
+      table.insert(payload_buffer, "</ComposeRequest>")
+      local payload = table.concat(payload_buffer)
+      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)) .. "?compose", payload, extend({
+        ["Content-length"] = #payload,
+        ["x-goog-acl"] = options.acl or "public-read",
+        ["Content-type"] = options.mimetype
       }, options.headers))
     end,
     start_resumable_upload = function(self, bucket, options)
       if options == nil then
         options = { }
       end
-      return self:_post("/" .. tostring(bucket) .. "/" .. tostring(options.key), "", extend({
+      return self:_post("/" .. tostring(bucket) .. "/" .. tostring(url.escape(options.key)), "", extend({
         ["Content-type"] = options.mimetype,
         ["Content-length"] = 0,
         ["x-goog-acl"] = options.acl or "public-read",

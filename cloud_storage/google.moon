@@ -21,6 +21,26 @@ extend = (t, ...) ->
       t[k] = v for k,v in pairs other
   t
 
+xml_escape = do
+  punct = "[%^$()%.%[%]*+%-?]"
+  escape_patt = (str) -> (str\gsub punct, (p) -> "%"..p)
+
+  xml_escape_entities = {
+    ['&']: '&amp;'
+    ['<']: '&lt;'
+    ['>']: '&gt;'
+    ['"']: '&quot;'
+    ["'"]: '&#039;'
+  }
+
+  xml_unescape_entities = {}
+  for key,value in pairs xml_escape_entities
+    xml_unescape_entities[value] = key
+
+  xml_escape_pattern = "[" .. concat([escape_patt char for char in pairs xml_escape_entities]) .. "]"
+
+  (text) -> (text\gsub xml_escape_pattern, xml_escape_entities)
+
 class LOMFormatter
   find_node = (node, tag) ->
     for child in *node
@@ -99,6 +119,7 @@ class Bucket
 
 class CloudStorage
   url_base: "commondatastorage.googleapis.com"
+  api_base: "storage.googleapis.com"
 
   new: (@oauth, @project_id) =>
     @formatter = LOMFormatter!
@@ -110,17 +131,13 @@ class CloudStorage
       "Authorization": "OAuth #{@oauth\get_access_token!}"
       "Date": date!\fmt "${http}"
     }
-  
+
   _request: (method="GET", path, data, headers) =>
     http = h.get!
 
     out = {}
     r = {
-      url: url.build {
-        scheme: "https"
-        host: "storage.googleapis.com"
-        path: path
-      }
+      url: "https://#{@api_base}#{path}"
       source: data and ltn12.source.string data
       method: method
       headers: extend @_headers!, headers
@@ -128,11 +145,11 @@ class CloudStorage
     }
     _, code, res_headers = http.request r
     res, code = @formatter\format table.concat(out), code, res_headers
+
     if type(res) == "table" and res.error
       nil, "#{res.message} #{res.details}", res
     else
       res, code
-
 
   bucket: (bucket) => Bucket bucket, @
 
@@ -151,14 +168,13 @@ class CloudStorage
 
   get_service: => @_get "/"
   get_bucket: (bucket) => @_get "/#{bucket}"
-  get_file: (bucket, key) => @_get "/#{bucket}/#{key}"
-  delete_file: (bucket, key) => @_delete "/#{bucket}/#{key}"
-  head_file: (bucket, key) => @_head "/#{bucket}/#{key}"
+  get_file: (bucket, key) => @_get "/#{bucket}/#{url.escape key}"
+  delete_file: (bucket, key) => @_delete "/#{bucket}/#{url.escape key}"
+  head_file: (bucket, key) => @_head "/#{bucket}/#{url.escape key}"
 
   -- sets predefined acl
   put_file_acl: (bucket, key, acl) =>
-    error "broken"
-    @_put "/#{bucket}/#{key}?acl", "", {
+    @_put "/#{bucket}/#{url.escape key}?acl", "", {
       "Content-length": 0
       "x-goog-acl": acl
     }
@@ -189,14 +205,48 @@ class CloudStorage
     @put_file_string bucket, key, data, options
 
   copy_file: (source_bucket, source_key, dest_bucket, dest_key, options={}) =>
-    @_put "/#{dest_bucket}/#{dest_key}", "", extend {
+    @_put "/#{dest_bucket}/#{url.escape dest_key}", "", extend {
       "Content-length": "0"
       "x-goog-copy-source": "/#{source_bucket}/#{source_key}"
       "x-goog-acl": options.acl or "public-read"
     }, options.headers
 
+  compose: (bucket, key, source_keys, options={}) =>
+    assert type(source_keys) == "table" and next(source_keys), "invalid source keys"
+
+    payload_buffer = {"<ComposeRequest>"}
+    for key_obj in *source_keys
+      local name, generation, if_generation_match
+
+      if type(key_obj) == "table"
+        {:name, :generation, :if_generation_match}
+      else
+        name = key_obj
+
+      assert name, "missing source key name for compose"
+      table.insert payload_buffer, "<Component>"
+      table.insert payload_buffer, "<Name>#{xml_escape name}</Name>"
+
+      if generation
+        table.insert payload_buffer, "<Generation>#{xml_escape generation}</Generation>"
+
+      if if_generation_match
+        table.insert payload_buffer, "<IfGenerationMatch>#{xml_escape if_generation_match}</IfGenerationMatch>"
+
+      table.insert payload_buffer, "</Component>"
+
+    table.insert payload_buffer, "</ComposeRequest>"
+
+    payload = table.concat payload_buffer
+
+    @_put "/#{bucket}/#{url.escape key}?compose", payload, extend {
+      "Content-length": #payload
+      "x-goog-acl": options.acl or "public-read"
+      "Content-type": options.mimetype
+    }, options.headers
+
   start_resumable_upload: (bucket, options={}) =>
-    @_post "/#{bucket}/#{options.key}", "", extend {
+    @_post "/#{bucket}/#{url.escape options.key}", "", extend {
       "Content-type": options.mimetype
       "Content-length": 0
       "x-goog-acl": options.acl or "public-read"
