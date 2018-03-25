@@ -225,7 +225,13 @@ do
         sink = ltn12.sink.table(out)
       }
       local _, code, res_headers = http.request(r)
-      return self.formatter:format(table.concat(out), code, res_headers)
+      local res
+      res, code = self.formatter:format(table.concat(out), code, res_headers)
+      if type(res) == "table" and res.error then
+        return nil, tostring(res.message) .. " " .. tostring(res.details), res
+      else
+        return res, code
+      end
     end,
     bucket = function(self, bucket)
       return Bucket(bucket, self)

@@ -127,7 +127,12 @@ class CloudStorage
       sink: ltn12.sink.table out
     }
     _, code, res_headers = http.request r
-    @formatter\format table.concat(out), code, res_headers
+    res, code = @formatter\format table.concat(out), code, res_headers
+    if type(res) == "table" and res.error
+      nil, "#{res.message} #{res.details}", res
+    else
+      res, code
+
 
   bucket: (bucket) => Bucket bucket, @
 
