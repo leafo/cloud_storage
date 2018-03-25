@@ -63,12 +63,6 @@ local files = storage:get_bucket("my_bucket")
 
 ## Reference
 
-### Error handling for storage methods
-
-Any methods that fail to execute will return `nil`, an error message, and an
-object that represents the error. Successful responses will return a Lua table
-containing the details of the operation.
-
 ### cloud_storage.oauth
 
 Handles OAuth authenticated requests. You must create an OAuth object that will
@@ -89,6 +83,12 @@ Communicates with the Google cloud storage API.
 ```lua
 local google = require "cloud_storage.google"
 ```
+
+### Error handling
+
+Any methods that fail to execute will return `nil`, an error message, and an
+object that represents the error. Successful responses will return a Lua table
+containing the details of the operation.
 
 #### `storage = oauth.CloudStorage(ouath_instance, project_id)`
 
@@ -115,6 +115,15 @@ local storage = google.CloudStorage(o, "111111111111")
 #### `storage:head_file(bucket, key)`
 
 <https://cloud.google.com/storage/docs/xml-api/head-object>
+
+#### `storage:copy_file(source_bucket, source_key, dest_bucket, dest_key, options={})`
+
+<https://cloud.google.com/storage/docs/xml-api/put-object-copy>
+
+Options:
+
+* `headers`: table of additional headers to include in request
+* `acl`: value to use for `x-goog-acl`, defaults to `public-read`
 
 #### `storage:put_file(bucket, fname, opts={})`
 
