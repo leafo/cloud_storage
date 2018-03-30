@@ -2,7 +2,8 @@ url = require "socket.url"
 mime = require "mime"
 json = require "cjson"
 
-crypto = require "crypto"
+pkey = require "openssl.pkey"
+digest = require "openssl.digest"
 
 h = require"cloud_storage.http"
 
@@ -15,7 +16,7 @@ param = (tbl) ->
 class OAuth
   auth_url: "https://accounts.google.com/o/oauth2/token"
   header: '{"alg":"RS256","typ":"JWT"}'
-  dtype: "sha256WithRSAEncryption"
+  digest_type: "sha256WithRSAEncryption"
 
   scope: {
     read_only: "https://www.googleapis.com/auth/devstorage.read_only"
@@ -53,10 +54,13 @@ class OAuth
     @access_token
 
   sign_string: (string) =>
-    (mime.b64 crypto.sign @dtype, string, @_private_key!)
+    d = assert digest.new @digest_type
+    key = @_private_key!
+    d\update string
+    (mime.b64 assert key\sign d)
 
   _private_key: =>
-    with key = assert crypto.pkey.read @private_key_file, true
+    with key = assert pkey.new io.open(@private_key_file)\read "*a"
       @_private_key = -> key
 
   _make_jwt: (client_email, private_key) =>

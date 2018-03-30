@@ -1,7 +1,8 @@
 local url = require("socket.url")
 local mime = require("mime")
 local json = require("cjson")
-local crypto = require("crypto")
+local pkey = require("openssl.pkey")
+local digest = require("openssl.digest")
 local h = require("cloud_storage.http")
 local param
 param = function(tbl)
@@ -23,7 +24,7 @@ do
   local _base_0 = {
     auth_url = "https://accounts.google.com/o/oauth2/token",
     header = '{"alg":"RS256","typ":"JWT"}',
-    dtype = "sha256WithRSAEncryption",
+    digest_type = "sha256WithRSAEncryption",
     scope = {
       read_only = "https://www.googleapis.com/auth/devstorage.read_only",
       read_write = "https://www.googleapis.com/auth/devstorage.read_write",
@@ -53,11 +54,14 @@ do
       return self.access_token
     end,
     sign_string = function(self, string)
-      return (mime.b64(crypto.sign(self.dtype, string, self:_private_key())))
+      local d = assert(digest.new(self.digest_type))
+      local key = self:_private_key()
+      d:update(string)
+      return (mime.b64(assert(key:sign(d))))
     end,
     _private_key = function(self)
       do
-        local key = assert(crypto.pkey.read(self.private_key_file, true))
+        local key = assert(pkey.new(io.open(self.private_key_file):read("*a")))
         self._private_key = function()
           return key
         end
