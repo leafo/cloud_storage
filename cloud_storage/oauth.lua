@@ -59,14 +59,17 @@ do
       d:update(string)
       return (mime.b64(assert(key:sign(d))))
     end,
-    _private_key = function(self)
+    _load_private_key = function(self, str)
       do
-        local key = assert(pkey.new(io.open(self.private_key_file):read("*a")))
+        local key = assert(pkey.new(str))
         self._private_key = function()
           return key
         end
         return key
       end
+    end,
+    _private_key = function(self)
+      return self:_load_private_key(assert(assert(io.open(self.private_key_file)):read("*a")))
     end,
     _make_jwt = function(self, client_email, private_key)
       local hr = 60 * 60

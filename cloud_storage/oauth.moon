@@ -59,9 +59,12 @@ class OAuth
     d\update string
     (mime.b64 assert key\sign d)
 
-  _private_key: =>
-    with key = assert pkey.new io.open(@private_key_file)\read "*a"
+  _load_private_key: (str) =>
+    with key = assert pkey.new str
       @_private_key = -> key
+
+  _private_key: =>
+    @_load_private_key assert assert(io.open(@private_key_file))\read "*a"
 
   _make_jwt: (client_email, private_key) =>
     hr = 60*60

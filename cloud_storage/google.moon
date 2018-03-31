@@ -121,6 +121,17 @@ class CloudStorage
   url_base: "commondatastorage.googleapis.com"
   api_base: "storage.googleapis.com"
 
+  @from_json_key_file: (file) =>
+    file_contents = assert assert(io.open(file))\read "*a"
+    json = require("cjson")
+    obj = assert json.decode file_contents
+    import OAuth from require "cloud_storage.oauth"
+
+    oauth = OAuth obj.client_email
+    oauth\_load_private_key obj.private_key
+
+    CloudStorage oauth, obj.client_id
+
   new: (@oauth, @project_id) =>
     @formatter = LOMFormatter!
 

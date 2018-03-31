@@ -571,6 +571,16 @@ do
   })
   _base_0.__class = _class_0
   local self = _class_0
+  self.from_json_key_file = function(self, file)
+    local file_contents = assert(assert(io.open(file)):read("*a"))
+    json = require("cjson")
+    local obj = assert(json.decode(file_contents))
+    local OAuth
+    OAuth = require("cloud_storage.oauth").OAuth
+    local oauth = OAuth(obj.client_email)
+    oauth:_load_private_key(obj.private_key)
+    return CloudStorage(oauth, obj.client_id)
+  end
   local _list_0 = {
     "GET",
     "POST",
