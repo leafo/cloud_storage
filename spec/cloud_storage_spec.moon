@@ -113,7 +113,8 @@ describe "cloud_storage", ->
               }
 
             dupe = {k,v for k,v in pairs r}
-            dupe.source = dupe.source!
+            if dupe.source
+              dupe.source = dupe.source!
             dupe.sink = nil
             dupe.headers.Date = nil
             table.insert http_requests, dupe
@@ -139,6 +140,54 @@ describe "cloud_storage", ->
           }
         }
 
+
+      it "get_bucket", ->
+        storage\get_bucket "mybucket"
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket"
+            method: "GET"
+            headers: {
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "get_file", ->
+        storage\get_file "mybucket", "source/my-file.lua"
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/source%2fmy%2dfile%2elua"
+            method: "GET"
+            headers: {
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "copy_file", ->
+        storage\copy_file "from_bucket", "input/a.txt", "to_bucket", "output/b.txt", {
+          acl: "private"
+        }
+
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/to_bucket/output%2fb%2etxt"
+            method: "PUT"
+            headers: {
+              "Content-length": "0"
+              "x-goog-api-version": 2
+              "x-goog-acl": "private"
+              "x-goog-copy-source": "/from_bucket/input/a.txt"
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
 
   describe "with storage from json key", ->
     local storage
