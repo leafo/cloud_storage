@@ -3,6 +3,7 @@ oauth = require "cloud_storage.oauth"
 google = require "cloud_storage.google"
 
 TEST_KEY_PATH = "spec/test_key.pem"
+TEST_KEY_PATH_JSON = "spec/test_key.json"
 
 describe "cloud_storage", ->
   it "should create an oauth", ->
@@ -23,7 +24,6 @@ describe "cloud_storage", ->
     before_each  ->
       o = oauth.OAuth "leaf@leafo.net", TEST_KEY_PATH
       storage = google.CloudStorage o, "111111111111"
-
 
     it "should create signed url", ->
       url = storage\signed_url "thebucket", "hello.txt", 10000
@@ -50,3 +50,13 @@ describe "cloud_storage", ->
       headers["Content-Length"] = 0
       assert.same "x-goog-acl:project-private\nx-goog-meta-hello:hella helli", storage\canonicalize_headers headers
 
+
+  describe "with storage from json key", ->
+    local storage
+
+    before_each  ->
+      storage = google.CloudStorage\from_json_key_file TEST_KEY_PATH_JSON
+
+    it "should create signed url", ->
+      url = storage\signed_url "thebucket", "hello.txt", 10000
+      assert.same "http://commondatastorage.googleapis.com/thebucket/hello.txt?GoogleAccessId=leaf@leafo.net&Expires=10000&Signature=W8kzLHy1p0wAEjR%2FdPb9VeJ%2B%2Bm154%2BEJFBo47vdWmVGNsFFDo6n%2Bhnpy17bYQH9xF8H2lABp%2BJyn%2B0ViJimIDZwiQ%2FtPe1bTTrXVA1Uzucu7tdH29M60mnwRCyxYKQqoVkDhwki1HuUPluRRVndkrdfU1J8Cq8qIEaXcGDzt3O4=", url
