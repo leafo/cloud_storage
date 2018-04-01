@@ -87,6 +87,58 @@ describe "cloud_storage", ->
         }
       }, policy
 
+    describe "with http", ->
+      local http_requests
+      local snapshot
+
+      json = require "cjson"
+
+      before_each ->
+        snapshot = assert\snapshot!
+
+      after_each ->
+        snapshot\revert!
+
+      before_each ->
+        http_requests = {}
+
+        http = require("cloud_storage.http")
+        stub(http, "get", {
+          request: (r) ->
+            -- let the token request go through
+            if r == "https://accounts.google.com/o/oauth2/token"
+              return json.encode {
+                expires_in: 100000
+                access_token: "my-fake-access-token"
+              }
+
+            dupe = {k,v for k,v in pairs r}
+            dupe.source = dupe.source!
+            dupe.sink = nil
+            dupe.headers.Date = nil
+            table.insert http_requests, dupe
+        })
+
+      it "put_file_string", ->
+        storage\put_file_string "mybucket", "hello.txt", "the contents", {
+          acl: "public-read"
+        }
+
+        assert.same http_requests, {
+          {
+            url: "https://storage.googleapis.com/mybucket/hello.txt"
+            method: "PUT"
+            source: "the contents"
+            headers: {
+              "Content-length": 12
+              "x-goog-acl": "public-read"
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }
+
 
   describe "with storage from json key", ->
     local storage
