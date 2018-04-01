@@ -135,22 +135,35 @@ local storage = google.CloudStorage(o, "111111111111")
 
 Options:
 
-* `headers`: table of additional headers to include in request
 * `acl`: value to use for `x-goog-acl`, defaults to `public-read`
+* `headers`: table of additional headers to include in request
 
-#### `storage:put_file(bucket, fname, opts={})`
+#### `storage:compose(bucket, key, source_keys, options={})`
 
-Reads `fname` from disk and uploads it. The key of the file will be the name of
-the file unless `opts.key` is provided. The mimetype of the file is guessed
-based on the extension unless `opts.mimetype` is provided.
+<https://cloud.google.com/storage/docs/xml-api/put-object-compose>
+
+Composes a new file from multiple source files in the same bucket by
+concatenating them.
+
+`source_keys` is an array of keys as strings or an array of key declarations as
+tables.
+
+The table format for a source key is structured like this:
 
 ```lua
-storage:put_file("my_bucket", "source.lua", {
-  mimetype = "text/lua"
-})
+{
+  name = "file.png",
+  -- optional fields:
+  generation = "1361471441094000",
+  if_generation_match = "1361471441094000",
+}
 ```
 
-All the same options from `put_file_string` are available for this method.
+Options:
+
+* `acl`: value to use for `x-goog-acl`, defaults to `public-read`
+* `mimetype`: sets `Content-type` header for the composed file
+* `headers`: table of additional headers to include in request
 
 #### `storage:put_file_string(bucket, key, data, opts={})`
 
@@ -172,6 +185,24 @@ storage:put_file_string("my_bucket", "message.txt", "hello world!", {
 })
 ```
 
+#### `storage:put_file(bucket, fname, opts={})`
+
+Reads `fname` from disk and uploads it. The key of the file will be the name of
+the file unless `opts.key` is provided. The mimetype of the file is guessed
+based on the extension unless `opts.mimetype` is provided.
+
+```lua
+storage:put_file("my_bucket", "source.lua", {
+  mimetype = "text/lua"
+})
+```
+
+All the same options from `put_file_string` are available for this method.
+
+> **Note:** This method is currently inefficient with uploads. The whole file
+> is loaded into memory and sent at once in the request. An alternative
+> implementation will be added in the future.
+
 #### `storage:signed_url(bucket, key, expiration)`
 
 Creates a temporarily URL for downloading an object regardless of it's ACL.
@@ -190,8 +221,10 @@ print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 * Replace `luacrypto` with `luaossl`
 * Add support for `json` private keys
 * Better error handling for all API calls. (Failures return `nil`, error message, and error object)
-* Add `copy` and `compose` methods
-* Add support for creating resumable upload URLs
+* Add `copy_file` and `compose` methods
+* Add `upload_url` method to create upload URLs
+* Add `start_resumable_upload` method for creating resumable uploads
+* Headers are canonicalized and sorted to make them consistent between calls
 * Fix bug where some special characters were not being encoded for signed URLs
 * Rewrite documentation tutorial
 
