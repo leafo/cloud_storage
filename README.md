@@ -210,13 +210,12 @@ All the same options from `put_file_string` are available for this method.
 > into memory and sent at once in the request. An alternative implementation
 > will be added in the future. Open a ticket if you need it.
 
-#### `storage:start_resumable_upload(bucket, options={})`
+#### `storage:start_resumable_upload(bucket, key, options={})`
 
 <https://cloud.google.com/storage/docs/xml-api/resumable-upload>
 
 Options:
 
-* `key`: key for upload, **required**
 * `acl`: value to use for `x-goog-acl`, defaults to `public-read`
 * `mimetype`: sets `Content-type` header for the composed file
 * `headers`: table of additional headers to include in request

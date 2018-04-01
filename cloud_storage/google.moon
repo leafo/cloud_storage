@@ -256,11 +256,15 @@ class CloudStorage
       "Content-type": options.mimetype
     }, options.headers
 
-  start_resumable_upload: (bucket, options={}) =>
+  start_resumable_upload: (bucket, key, options={}) =>
     assert bucket, "missing bucket"
-    assert options.key, "missing key"
+    assert key, "missing key"
 
-    @_post "/#{bucket}/#{url.escape options.key}", "", extend {
+    if type(key) == "table"
+      options = key
+      key = assert options.key, "missing key"
+
+    @_post "/#{bucket}/#{url.escape key}", "", extend {
       "Content-type": options.mimetype
       "Content-length": 0
       "x-goog-acl": options.acl or "public-read"

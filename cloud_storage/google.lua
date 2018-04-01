@@ -387,13 +387,17 @@ do
         ["Content-type"] = options.mimetype
       }, options.headers))
     end,
-    start_resumable_upload = function(self, bucket, options)
+    start_resumable_upload = function(self, bucket, key, options)
       if options == nil then
         options = { }
       end
       assert(bucket, "missing bucket")
-      assert(options.key, "missing key")
-      return self:_post("/" .. tostring(bucket) .. "/" .. tostring(url.escape(options.key)), "", extend({
+      assert(key, "missing key")
+      if type(key) == "table" then
+        options = key
+        key = assert(options.key, "missing key")
+      end
+      return self:_post("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)), "", extend({
         ["Content-type"] = options.mimetype,
         ["Content-length"] = 0,
         ["x-goog-acl"] = options.acl or "public-read",
