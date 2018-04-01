@@ -391,6 +391,8 @@ do
       if options == nil then
         options = { }
       end
+      assert(bucket, "missing bucket")
+      assert(options.key, "missing key")
       return self:_post("/" .. tostring(bucket) .. "/" .. tostring(url.escape(options.key)), "", extend({
         ["Content-type"] = options.mimetype,
         ["Content-length"] = 0,

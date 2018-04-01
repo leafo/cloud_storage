@@ -257,6 +257,9 @@ class CloudStorage
     }, options.headers
 
   start_resumable_upload: (bucket, options={}) =>
+    assert bucket, "missing bucket"
+    assert options.key, "missing key"
+
     @_post "/#{bucket}/#{url.escape options.key}", "", extend {
       "Content-type": options.mimetype
       "Content-length": 0
