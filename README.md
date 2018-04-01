@@ -230,6 +230,10 @@ Creates a temporarily URL for downloading an object regardless of it's ACL.
 print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 ```
 
+#### `storage:put_file_acl(bucket, key, acl)`
+
+<https://cloud.google.com/storage/docs/xml-api/put-object-acls>
+
 ## Changelog
 
 ### `1.0.0` Mar 31, 2018
