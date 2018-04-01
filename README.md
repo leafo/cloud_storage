@@ -14,26 +14,41 @@ The easiest way use this library is to create a service account for your
 project. You'll need to download a private key store it alongside your
 configuration.
 
-Go to the APIs console, <https://console.developers.google.com>. Enable
-Cloud Storage if you haven't done so already. You may also need to enter
-billing information.
 
-Navigate to **Service accounts**, located on the sidebar. Find the **Create
-service account** button and click it.
+Go to the APIs console, <https://console.cloud.google.com>. Enable Cloud
+Storage if you haven't done so already. You may also need to enter billing
+information.
 
-![Service accounts](http://leafo.net/shotsnb/2016-08-30_23-54-13.png)
+Navigate to **IAM & admin** » **Service accounts**, located on the sidebar. Click **Create
+service account**.
 
-Choose `P12` for the key type.
+![Create service account](http://leafo.net/shotsnb/2018-03-31_20-54-45.png)
 
-Now you'll be given download access to the newly created private key, along
-with the password which is hard coded to `notasecret`.
+Select *Furnish a new private key* and select *JSON* as the type.  After
+creating the service account your browser will download a `.json` file.  Store
+that securely, since it grants access to your Google cloud account.
 
-![x](http://leafo.net/shotsnb/2016-08-30_23-56-12.png)
+The `.json` is used to create a new API client with this library:
 
-Download the private key, it's a `.p12` file. In order to use it we need to
-convert it to a `.pem`. Run the following command (replacing `key.p12` and
-`key.pem` with the input filename and desired output filename). Enter
-`notasecret` for the password.
+```lua
+local google = require "cloud_storage.google"
+local storage = google.CloudStorage:from_json_key_file("path/to/my-key.json")
+
+-- you can now use any of the methods on the storage object
+local files = assert(storage:get_bucket("my_bucket"))
+```
+
+## Using a p12/pem secret key
+
+Use these directions if you have a key created with the `P12` type.
+
+
+The private key file you will download is a  `.p12` file. The key uses a hard
+coded password `notasecret`.
+
+In order to use it we need to convert it to a `.pem`. Run the following command
+(replacing `key.p12` and `key.pem` with the input filename and desired output
+filename). Enter `notasecret` for the password.
 
 ```bash
 openssl pkcs12 -in key.p12 -out key.pem -nodes -clcerts
@@ -43,9 +58,7 @@ We'll need one more piece of information, the service account email address.
 You'll find it labeled **Service account ID** on the service account list. It
 might look something like `cloud-storage@my-project.iam.gserviceaccount.com`.
 
-Now we're ready to write some code. Let's write a simple application that lists
-the contents of a bucket. Remember, you must have access to the bucket. You can
-create a new bucket from the console if you don't already have one.
+You can create a new client like so:
 
 ```lua
 local oauth = require "cloud_storage.oauth"
@@ -168,5 +181,22 @@ Creates a temporarily URL for downloading an object regardless of it's ACL.
 ```lua
 print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 ```
+
+## Changelog
+
+# Mar 31, 2018
+
+* **Changed** `put_file_string` now takes `key` as second argument, instead of within options table
+* Replace `luacrypto` with `luaossl`
+* Add support for `json` private keys
+* Better error handling for all API calls. (Failures return `nil`, error message, and error object)
+* Add `copy` and `compose` methods
+* Add support for creating resumable upload URLs
+* Fix bug where some special characters were not being encoded for signed URLs
+* Rewrite documentation tutorial
+
+# Sep 29, 2013
+
+* Initial release
 
   [0]: https://developers.google.com/storage/docs/accesscontrol
