@@ -233,7 +233,7 @@ print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 
 ## Changelog
 
-# Mar 31, 2018
+### `1.0.0` Mar 31, 2018
 
 * **Changed** `put_file_string` now takes `key` as second argument, instead of within options table
 * Replace `luacrypto` with `luaossl`
@@ -246,7 +246,7 @@ print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 * Fix bug where some special characters were not being encoded for signed URLs
 * Rewrite documentation tutorial
 
-# Sep 29, 2013
+### `0.1.0` Sep 29, 2013
 
 * Initial release
 
