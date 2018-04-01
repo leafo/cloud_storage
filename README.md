@@ -242,6 +242,7 @@ print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 * Add `upload_url` method to create upload URLs
 * Add `start_resumable_upload` method for creating resumable uploads
 * Headers are canonicalized and sorted to make them consistent between calls
+* Fix bug where special characters in key were not being URL encoded
 * Fix bug where some special characters were not being encoded for signed URLs
 * Rewrite documentation tutorial
 

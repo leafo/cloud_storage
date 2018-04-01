@@ -50,6 +50,43 @@ describe "cloud_storage", ->
       headers["Content-Length"] = 0
       assert.same "x-goog-acl:project-private\nx-goog-meta-hello:hella helli", storage\canonicalize_headers headers
 
+    it "creates upload url", ->
+      url, params = assert storage\upload_url "thebucket", "hello.txt", {
+        expires: 10000
+        filename: "bart.zip"
+        size_limit: 1024
+        acl: "public-read"
+        success_action_redirect: "http://leafo.net"
+      }
+
+      assert.same "https://thebucket.commondatastorage.googleapis.com", url
+
+      assert.same {
+        "Content-Disposition": "attachment; filename=\"bart.zip\"",
+        GoogleAccessId: "leaf@leafo.net",
+        signature: "BtimAyE8GUOcCRE3ie7/6AjAuVXn/urTro69vhMB35oOPzlWT23iguL9mi2D7KQ0kAP+6uJL9u3Dr7xtLgMhMFDFWje9GZ9VdZlEBELjyB+MWrXZm1fvMcbr8WfWAK/JCezEe3keOdXpD5w5kV6lydVKZWVapUNf0u2CD1WtCG0=",
+        success_action_redirect: "http://leafo.net",
+        policy: "eyJleHBpcmF0aW9uIjoiMTk3MC0wMS0wMVQwMjo0Njo0MFoiLCJjb25kaXRpb25zIjpbeyJhY2wiOiJwdWJsaWMtcmVhZCJ9LHsiYnVja2V0IjoidGhlYnVja2V0In0sWyJlcSIsIiRrZXkiLCJoZWxsby50eHQiXSxbImVxIiwiJENvbnRlbnQtRGlzcG9zaXRpb24iLCJhdHRhY2htZW50OyBmaWxlbmFtZT1cImJhcnQuemlwXCIiXSxbImNvbnRlbnQtbGVuZ3RoLXJhbmdlIiwwLDEwMjRdLHsic3VjY2Vzc19hY3Rpb25fcmVkaXJlY3QiOiJodHRwOlwvXC9sZWFmby5uZXQifV19",
+        key:"hello.txt",
+        acl: "public-read"
+      }, params
+
+      mime = require "mime"
+      json = require "cjson"
+
+      policy = json.decode (mime.unb64 params.policy)
+      assert.same {
+        expiration: "1970-01-01T02:46:40Z"
+        conditions: {
+          { acl: "public-read" }
+          { bucket: "thebucket" }
+          { "eq", "$key", "hello.txt" }
+          { "eq", "$Content-Disposition", "attachment; filename=\"bart.zip\"" }
+          { "content-length-range", 0, 1024 }
+          { success_action_redirect: "http://leafo.net" }
+        }
+      }, policy
+
 
   describe "with storage from json key", ->
     local storage
