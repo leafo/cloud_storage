@@ -1,6 +1,9 @@
 
 import Bucket from require "cloud_storage.google"
 
+shell_escape = (str) ->
+  str\gsub "'", "''"
+
 execute = (cmd) ->
   -- print "RUN: #{cmd}"
   proc = io.popen cmd
@@ -25,19 +28,25 @@ class MockStorage
 
   get_bucket: (bucket) =>
     path = "#{@dir_name}/#{bucket}"
-    execute "mkdir -p '#{path}'"
-    escaped_path = "$(echo '#{path}' | sed -e 's/[\\/&]/\\\\&/g')"
-    cmd = 'find "'..path..'" -type f | sed -e "s/^'..escaped_path..'//"'
+    execute "mkdir -p '#{shell_escape path}'"
+    escaped_path = "$(echo '#{shell_escape path}' | sed -e 's/[\\/&]/\\\\&/g')"
+    cmd = 'find "'..shell_escape(path)..'" -type f | sed -e "s/^'..escaped_path..'//"'
     files = execute cmd
     return for file in files\gmatch "[^\n]+"
       { key: file\match "/?(.*)" }
 
-  put_file_string: (bucket, data, options={}) =>
-    error "missing key" unless options.key
-    path = @_full_path bucket, options.key
-    dir = execute "dirname '#{path}'"
+  put_file_string: (bucket, key, data, options={}) =>
+    assert not options.key, "key is not an option, but an argument"
+    if type(data) == "table"
+      error "put_file_string interface has changed: key is now the second argument"
 
-    execute "mkdir -p '#{dir}'"
+    assert key, "missing key"
+    assert type(data) == "string", "expected string for data"
+
+    path = @_full_path bucket, key
+    dir = execute "dirname '#{shell_escape path}'"
+
+    execute "mkdir -p '#{shell_escape dir}'"
     with io.open path, "w"
       \write data
       \close!
@@ -54,7 +63,7 @@ class MockStorage
 
   delete_file: (bucket, key) =>
     path = @_full_path bucket, key
-    os.execute "[ -a '#{path}' ] && rm '#{path}'"
+    os.execute "[ -a '#{shell_escape path}' ] && rm '#{shell_escape path}'"
     200
 
   get_file: (bucket, key) => error "not implemented"

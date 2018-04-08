@@ -1,5 +1,9 @@
 local Bucket
 Bucket = require("cloud_storage.google").Bucket
+local shell_escape
+shell_escape = function(str)
+  return str:gsub("'", "''")
+end
 local execute
 execute = function(cmd)
   local proc = io.popen(cmd)
@@ -37,9 +41,9 @@ do
     end,
     get_bucket = function(self, bucket)
       local path = tostring(self.dir_name) .. "/" .. tostring(bucket)
-      execute("mkdir -p '" .. tostring(path) .. "'")
-      local escaped_path = "$(echo '" .. tostring(path) .. "' | sed -e 's/[\\/&]/\\\\&/g')"
-      local cmd = 'find "' .. path .. '" -type f | sed -e "s/^' .. escaped_path .. '//"'
+      execute("mkdir -p '" .. tostring(shell_escape(path)) .. "'")
+      local escaped_path = "$(echo '" .. tostring(shell_escape(path)) .. "' | sed -e 's/[\\/&]/\\\\&/g')"
+      local cmd = 'find "' .. shell_escape(path) .. '" -type f | sed -e "s/^' .. escaped_path .. '//"'
       local files = execute(cmd)
       return (function()
         local _accum_0 = { }
@@ -53,16 +57,19 @@ do
         return _accum_0
       end)()
     end,
-    put_file_string = function(self, bucket, data, options)
+    put_file_string = function(self, bucket, key, data, options)
       if options == nil then
         options = { }
       end
-      if not (options.key) then
-        error("missing key")
+      assert(not options.key, "key is not an option, but an argument")
+      if type(data) == "table" then
+        error("put_file_string interface has changed: key is now the second argument")
       end
-      local path = self:_full_path(bucket, options.key)
-      local dir = execute("dirname '" .. tostring(path) .. "'")
-      execute("mkdir -p '" .. tostring(dir) .. "'")
+      assert(key, "missing key")
+      assert(type(data) == "string", "expected string for data")
+      local path = self:_full_path(bucket, key)
+      local dir = execute("dirname '" .. tostring(shell_escape(path)) .. "'")
+      execute("mkdir -p '" .. tostring(shell_escape(dir)) .. "'")
       do
         local _with_0 = io.open(path, "w")
         _with_0:write(data)
@@ -91,7 +98,7 @@ do
     end,
     delete_file = function(self, bucket, key)
       local path = self:_full_path(bucket, key)
-      os.execute("[ -a '" .. tostring(path) .. "' ] && rm '" .. tostring(path) .. "'")
+      os.execute("[ -a '" .. tostring(shell_escape(path)) .. "' ] && rm '" .. tostring(shell_escape(path)) .. "'")
       return 200
     end,
     get_file = function(self, bucket, key)
