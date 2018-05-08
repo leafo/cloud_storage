@@ -154,6 +154,7 @@ class CloudStorage
       headers: extend @_headers!, headers
       sink: ltn12.sink.table out
     }
+
     _, code, res_headers = http.request r
     res, code = @formatter\format table.concat(out), code, res_headers
 
@@ -220,6 +221,7 @@ class CloudStorage
       "Content-length": "0"
       "x-goog-copy-source": "/#{source_bucket}/#{source_key}"
       "x-goog-acl": options.acl or "public-read"
+      "x-goog-metadata-directive": options.metadata_directive
     }, options.headers
 
   compose: (bucket, key, source_keys, options={}) =>

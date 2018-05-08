@@ -345,7 +345,8 @@ do
       return self:_put("/" .. tostring(dest_bucket) .. "/" .. tostring(url.escape(dest_key)), "", extend({
         ["Content-length"] = "0",
         ["x-goog-copy-source"] = "/" .. tostring(source_bucket) .. "/" .. tostring(source_key),
-        ["x-goog-acl"] = options.acl or "public-read"
+        ["x-goog-acl"] = options.acl or "public-read",
+        ["x-goog-metadata-directive"] = options.metadata_directive
       }, options.headers))
     end,
     compose = function(self, bucket, key, source_keys, options)
