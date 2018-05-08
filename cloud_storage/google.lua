@@ -286,8 +286,8 @@ do
     get_bucket = function(self, bucket)
       return self:_get("/" .. tostring(bucket))
     end,
-    get_file = function(self, bucket, key)
-      return self:_get("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
+    get_file = function(self, bucket, key, opts)
+      return self:_get("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)), nil, opts and opts.headers)
     end,
     delete_file = function(self, bucket, key)
       return self:_delete("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))

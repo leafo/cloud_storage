@@ -180,7 +180,10 @@ class CloudStorage
 
   get_service: => @_get "/"
   get_bucket: (bucket) => @_get "/#{bucket}"
-  get_file: (bucket, key) => @_get "/#{bucket}/#{url.escape key}"
+
+  get_file: (bucket, key, opts) =>
+    @_get "/#{bucket}/#{url.escape key}", nil, opts and opts.headers
+
   delete_file: (bucket, key) => @_delete "/#{bucket}/#{url.escape key}"
   head_file: (bucket, key) => @_head "/#{bucket}/#{url.escape key}"
 
