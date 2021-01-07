@@ -451,10 +451,7 @@ do
       if type(expiration) == "number" then
         expiration = os.date("!%Y-%m-%dT%H:%M:%SZ", expiration)
       end
-      local doc = mime.b64(json.encode({
-        expiration = expiration,
-        conditions = conditions
-      }))
+      local doc = mime.b64([[{"expiration":]] .. json.encode(expiration) .. [[,"conditions":]] .. json.encode(conditions) .. [[}]])
       return doc, self.oauth:sign_string(doc)
     end,
     signed_url = function(self, bucket, key, expiration, opts)

@@ -291,7 +291,8 @@ class CloudStorage
     if type(expiration) == "number"
       expiration = os.date "!%Y-%m-%dT%H:%M:%SZ", expiration
 
-    doc = mime.b64 json.encode { :expiration, :conditions }
+    -- this is done this way to ensure stable ordering for specs
+    doc = mime.b64 [[{"expiration":]] ..json.encode(expiration).. [[,"conditions":]] .. json.encode(conditions) .. [[}]]
     doc, @oauth\sign_string doc
 
   -- expiration: unix timestamp in UTC
