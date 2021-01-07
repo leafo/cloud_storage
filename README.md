@@ -1,6 +1,6 @@
 # `cloud_storage`
 
-[![Build Status](https://travis-ci.org/leafo/cloud_storage.svg?branch=master)](https://travis-ci.org/leafo/cloud_storage)
+![test](https://github.com/leafo/cloud_storage/workflows/test/badge.svg)
 
 A library for connecting to [Google Cloud Storage](https://cloud.google.com/products/cloud-storage) through Lua.
 
