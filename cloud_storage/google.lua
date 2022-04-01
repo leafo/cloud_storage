@@ -287,15 +287,19 @@ do
       return self:_get("/" .. tostring(bucket))
     end,
     get_file = function(self, bucket, key, opts)
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       return self:_get("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)), nil, opts and opts.headers)
     end,
     delete_file = function(self, bucket, key)
+      assert(type(key) == "string" and key ~= "", "Invalid key for deletion (missing or empty string)")
       return self:_delete("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
     end,
     head_file = function(self, bucket, key)
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       return self:_head("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)))
     end,
     put_file_acl = function(self, bucket, key, acl)
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       return self:_put("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)) .. "?acl", "", {
         ["Content-length"] = 0,
         ["x-goog-acl"] = acl
@@ -309,7 +313,7 @@ do
       if type(data) == "table" then
         error("put_file_string interface has changed: key is now the second argument")
       end
-      assert(key, "missing key")
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       assert(type(data) == "string", "expected string for data")
       return self:_put("/" .. tostring(bucket) .. "/" .. tostring(key), data, extend({
         ["Content-length"] = #data,

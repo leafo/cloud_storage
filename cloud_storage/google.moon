@@ -182,13 +182,20 @@ class CloudStorage
   get_bucket: (bucket) => @_get "/#{bucket}"
 
   get_file: (bucket, key, opts) =>
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
     @_get "/#{bucket}/#{url.escape key}", nil, opts and opts.headers
 
-  delete_file: (bucket, key) => @_delete "/#{bucket}/#{url.escape key}"
-  head_file: (bucket, key) => @_head "/#{bucket}/#{url.escape key}"
+  delete_file: (bucket, key) =>
+    assert type(key) == "string" and key != "", "Invalid key for deletion (missing or empty string)"
+    @_delete "/#{bucket}/#{url.escape key}"
+
+  head_file: (bucket, key) =>
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
+    @_head "/#{bucket}/#{url.escape key}"
 
   -- sets predefined acl
   put_file_acl: (bucket, key, acl) =>
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
     @_put "/#{bucket}/#{url.escape key}?acl", "", {
       "Content-length": 0
       "x-goog-acl": acl
@@ -199,7 +206,7 @@ class CloudStorage
     if type(data) == "table"
       error "put_file_string interface has changed: key is now the second argument"
 
-    assert key, "missing key"
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
     assert type(data) == "string", "expected string for data"
 
     @_put "/#{bucket}/#{key}", data, extend {

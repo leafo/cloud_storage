@@ -169,6 +169,20 @@ describe "cloud_storage", ->
           }
         }, http_requests
 
+      it "get_file fails with empty key", ->
+        assert.has_error(
+          -> storage\get_file "mybucket", ""
+          "Invalid key (missing or empty string)"
+        )
+        assert.same { }, http_requests
+
+      it "get_file fails with missing key", ->
+        assert.has_error(
+          -> storage\get_file "mybucket"
+          "Invalid key (missing or empty string)"
+        )
+        assert.same { }, http_requests
+
       it "copy_file", ->
         storage\copy_file "from_bucket", "input/a.txt", "to_bucket", "output/b.txt", {
           acl: "private"
@@ -188,6 +202,36 @@ describe "cloud_storage", ->
             }
           }
         }, http_requests
+
+      it "delete_file", ->
+        storage\delete_file "mybucket", "source/my-pic..png"
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/source%2fmy%2dpic%2e%2epng"
+            method: "DELETE"
+            headers: {
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "delete_file fails with empty string key", ->
+        assert.has_error(
+          -> storage\delete_file "mybucket", ""
+          "Invalid key for deletion (missing or empty string)"
+        )
+
+        assert.same {}, http_requests
+
+      it "delete_file fails with missing string key", ->
+        assert.has_error(
+          -> storage\delete_file "mybucket"
+          "Invalid key for deletion (missing or empty string)"
+        )
+
+        assert.same {}, http_requests
 
   describe "with storage from json key", ->
     local storage
