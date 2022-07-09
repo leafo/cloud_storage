@@ -149,27 +149,6 @@ encode_tbl = function(params)
     return _accum_0
   end)())
 end
-if "test" == ... then
-  local http = require("socket.http")
-  local ltn12 = require("ltn12")
-  local out = { }
-  local body, boundary = encode_tbl({
-    wang = "bang",
-    dad = "mad",
-    f = File("hi.lua")
-  })
-  http.request({
-    url = "http://localhost/dump.php",
-    method = "POST",
-    sink = ltn12.sink.table(out),
-    source = ltn12.source.string(body),
-    headers = {
-      ["Content-length"] = #body,
-      ["Content-type"] = "multipart/form-data; boundary=" .. tostring(boundary)
-    }
-  })
-  print(concat(out))
-end
 return {
   encode = encode,
   encode_tbl = encode_tbl,

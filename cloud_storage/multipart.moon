@@ -67,30 +67,4 @@ encode = (params) ->
 encode_tbl = (params) ->
   encode [{k,v} for k,v in pairs params]
 
-if "test" == ...
-  http = require "socket.http"
-  ltn12 = require "ltn12"
-  out = {}
-
-  body, boundary = encode_tbl {
-    wang: "bang"
-    dad: "mad"
-    f: File"hi.lua"
-  }
-
-  http.request {
-    url: "http://localhost/dump.php"
-    method: "POST"
-    sink: ltn12.sink.table out
-    source: ltn12.source.string body
-    headers: {
-      "Content-length": #body
-      "Content-type": "multipart/form-data; boundary=#{boundary}"
-    }
-  }
-
-  print concat out
-  -- END TEST
-
-
 { :encode, :encode_tbl, :File }
