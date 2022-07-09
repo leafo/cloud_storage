@@ -273,7 +273,7 @@ do
       if opts == nil then
         opts = { }
       end
-      local scheme = opts.scheme or "http"
+      local scheme = opts.scheme or "https"
       if opts.subdomain then
         return tostring(scheme) .. "://" .. tostring(bucket) .. "." .. tostring(self.url_base)
       else
@@ -487,7 +487,7 @@ do
         }))
       end
       return concat({
-        "http://" .. tostring(self.url_base),
+        "https://" .. tostring(self.url_base),
         path,
         "?GoogleAccessId=",
         self.oauth.client_email,
@@ -546,8 +546,8 @@ do
       local action = self:bucket_url(bucket, {
         subdomain = true
       })
-      if not (opts.https == false) then
-        action = action:gsub("http:", "https:") or action
+      if opts.https == false then
+        action = action:gsub("^https:", "http:") or action
       end
       local params = {
         acl = acl,

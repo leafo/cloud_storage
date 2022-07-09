@@ -169,7 +169,7 @@ class CloudStorage
     @bucket_url(bucket) .. "/#{key}"
 
   bucket_url: (bucket, opts={}) =>
-    scheme = opts.scheme or "http"
+    scheme = opts.scheme or "https"
     if opts.subdomain
       "#{scheme}://#{bucket}.#{@url_base}"
     else
@@ -336,7 +336,7 @@ class CloudStorage
       })
 
     concat {
-      "http://#{@url_base}"
+      "https://#{@url_base}"
       path
       "?GoogleAccessId=", @oauth.client_email
       "&Expires=", expiration
@@ -375,8 +375,8 @@ class CloudStorage
 
     action = @bucket_url bucket, subdomain: true
 
-    unless opts.https == false
-      action = action\gsub("http:", "https:") or action
+    if opts.https == false
+      action = action\gsub("^https:", "http:") or action
 
     params = {
       :acl, :policy, :signature, :key
