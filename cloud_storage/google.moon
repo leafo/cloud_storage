@@ -339,7 +339,9 @@ class CloudStorage
       })
 
     concat {
-      "#{scheme}://#{@url_base}"
+      scheme
+      "://"
+      @url_base
       path
       "?GoogleAccessId=", @oauth.client_email
       "&Expires=", expiration

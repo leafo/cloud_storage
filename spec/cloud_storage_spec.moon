@@ -29,6 +29,17 @@ describe "cloud_storage", ->
       url = storage\signed_url "thebucket", "hello.txt", 10000
       assert.same "https://commondatastorage.googleapis.com/thebucket/hello.txt?GoogleAccessId=leaf@leafo.net&Expires=10000&Signature=W8kzLHy1p0wAEjR%2FdPb9VeJ%2B%2Bm154%2BEJFBo47vdWmVGNsFFDo6n%2Bhnpy17bYQH9xF8H2lABp%2BJyn%2B0ViJimIDZwiQ%2FtPe1bTTrXVA1Uzucu7tdH29M60mnwRCyxYKQqoVkDhwki1HuUPluRRVndkrdfU1J8Cq8qIEaXcGDzt3O4=", url
 
+    it "should create signed url with options", ->
+      url = storage\signed_url "thebucket", "hello.txt", 10000, {
+        headers: {
+          "Content-Disposition": "attachment" -- this header is ignored
+          "x-goog-resumable": "start"
+        }
+        verb: "POST"
+        scheme: "http"
+      }
+      assert.same 'http://commondatastorage.googleapis.com/thebucket/hello.txt?GoogleAccessId=leaf@leafo.net&Expires=10000&Signature=GwFHuaLI48MuvwD7YsoPlF3TMe1oZg1hFjdb37pzw65HKtNshW87gzCY7rXjYX4HmFr%2FYHJKZwQ4WQo30IGYYjG9ccJPAJaySYUW7JWkrk34h%2BlWYyhX0kq8ayEnCL3y96UJc3%2F0oizsUoIxxPek6KyzaWxEENWQQQVRxD6q2g0=', url
+
     it "should encode file with funky chars in it", ->
       url = storage\signed_url "thebucket", "he[f]llo#one.txt", 10000
       assert.falsy url\find "#", 1, true

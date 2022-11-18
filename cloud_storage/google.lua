@@ -490,7 +490,9 @@ do
         }))
       end
       return concat({
-        tostring(scheme) .. "://" .. tostring(self.url_base),
+        scheme,
+        "://",
+        self.url_base,
         path,
         "?GoogleAccessId=",
         self.oauth.client_email,

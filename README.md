@@ -220,7 +220,7 @@ Options:
 * `mimetype`: sets `Content-type` header for the composed file
 * `headers`: table of additional headers to include in request
 
-#### `storage:signed_url(bucket, key, expiration)`
+#### `storage:signed_url(bucket, key, expiration, opts={})`
 
 Creates a temporarily URL for downloading an object regardless of it's ACL.
 `expiration` is a Unix timestamp in the future, like one generated from
@@ -230,11 +230,21 @@ Creates a temporarily URL for downloading an object regardless of it's ACL.
 print(storage:signed_url("my_bucket", "message.txt", os.time() + 100))
 ```
 
+Options:
+
+* `headers`: table of additional `x-goog` headers to embed into the signature
+* `verb`: HTTP verb to embed into the signature, deafult `GET`
+* `scheme`: protocol of returned URL, default `https`
+
 #### `storage:put_file_acl(bucket, key, acl)`
 
 <https://cloud.google.com/storage/docs/xml-api/put-object-acls>
 
 ## Changelog
+
+### Future updates
+
+All future changelogs will be post on github release notes: https://github.com/leafo/cloud_storage/releases
 
 ### `1.0.0` Mar 31, 2018
 
