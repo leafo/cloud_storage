@@ -25,6 +25,20 @@ describe "cloud_storage", ->
       o = oauth.OAuth "leaf@leafo.net", TEST_KEY_PATH
       storage = google.CloudStorage o, "111111111111"
 
+    it "generates bucket url", ->
+      assert.same "https://commondatastorage.googleapis.com/my-bucket", storage\bucket_url "my-bucket"
+      assert.same "http://my-bucket.commondatastorage.googleapis.com", storage\bucket_url "my-bucket", {
+        scheme: "http"
+        subdomain: true
+      }
+
+    it "generates file url", ->
+      assert.same "https://commondatastorage.googleapis.com/my-bucket/pics/leafo.png", storage\file_url "my-bucket", "pics/leafo.png"
+      assert.same "http://my-bucket.commondatastorage.googleapis.com/pics/leafo.png", storage\file_url "my-bucket", "pics/leafo.png", {
+        scheme: "http"
+        subdomain: true
+      }
+
     it "should create signed url", ->
       url = storage\signed_url "thebucket", "hello.txt", 10000
       assert.same "https://commondatastorage.googleapis.com/thebucket/hello.txt?GoogleAccessId=leaf@leafo.net&Expires=10000&Signature=W8kzLHy1p0wAEjR%2FdPb9VeJ%2B%2Bm154%2BEJFBo47vdWmVGNsFFDo6n%2Bhnpy17bYQH9xF8H2lABp%2BJyn%2B0ViJimIDZwiQ%2FtPe1bTTrXVA1Uzucu7tdH29M60mnwRCyxYKQqoVkDhwki1HuUPluRRVndkrdfU1J8Cq8qIEaXcGDzt3O4=", url

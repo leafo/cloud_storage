@@ -220,6 +220,32 @@ Options:
 * `mimetype`: sets `Content-type` header for the composed file
 * `headers`: table of additional headers to include in request
 
+#### `storage:bucket_url(bucket, opts={})`
+
+Returns full URL for a bucket
+
+Options:
+
+* `subdomain`:  use the `{bucket}.domain` format  instead of default `domain/{bucket}` format
+* `scheme`: protocol of returned URL, default `https`
+
+#### `storage:bucket_url(bucket, opts={})`
+
+Returns full URL for a key on a bucket. Supports the same options as `storage:bucket_url` method.
+
+```lua
+storage:file_url("my-bucket", "pics/leafo.png") --> "https://commondatastorage.googleapis.com/my-bucket/pics/leafo.png"
+storage:file_url("my-bucket", "pics/leafo.png", {
+  scheme = "http",
+  subdomain = true,
+}) --> "http://my-bucket.commondatastorage.googleapis.com/pics/leafo.png"
+```
+
+Options:
+
+* `subdomain`:  use the `{bucket}.domain` format  instead of default `domain/{bucket}` format
+* `scheme`: protocol of returned URL, default `https`
+
 #### `storage:signed_url(bucket, key, expiration, opts={})`
 
 Creates a temporarily URL for downloading an object regardless of it's ACL.
@@ -235,6 +261,21 @@ Options:
 * `headers`: table of additional `x-goog` headers to embed into the signature
 * `verb`: HTTP verb to embed into the signature, deafult `GET`
 * `scheme`: protocol of returned URL, default `https`
+
+#### `storage:upload_url(bucket, key, opts={})`
+
+Generate a signed URL for browser-based upload.
+
+Options:
+
+* `content_disposition`
+* `filename` If provided, will append to content disposition as `filename=` (and set content disposition to `attachment` if none is provided)
+* `acl` default `project-private`
+* `success_action_redirect`
+* `expires` unix timestamp. Deafult: 1 hour from now
+* `size_limit`
+* `scheme` protocol of returned URL, default `https`
+
 
 #### `storage:put_file_acl(bucket, key, acl)`
 

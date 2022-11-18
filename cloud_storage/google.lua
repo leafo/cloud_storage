@@ -266,8 +266,8 @@ do
     bucket = function(self, bucket)
       return Bucket(bucket, self)
     end,
-    file_url = function(self, bucket, key)
-      return self:bucket_url(bucket) .. "/" .. tostring(key)
+    file_url = function(self, bucket, key, opts)
+      return self:bucket_url(bucket, opts) .. "/" .. tostring(key)
     end,
     bucket_url = function(self, bucket, opts)
       if opts == nil then

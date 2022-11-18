@@ -165,8 +165,8 @@ class CloudStorage
 
   bucket: (bucket) => Bucket bucket, @
 
-  file_url: (bucket, key) =>
-    @bucket_url(bucket) .. "/#{key}"
+  file_url: (bucket, key, opts) =>
+    @bucket_url(bucket, opts) .. "/#{key}"
 
   bucket_url: (bucket, opts={}) =>
     scheme = opts.scheme or "https"
