@@ -304,12 +304,15 @@ class CloudStorage
 
   -- expiration: unix timestamp in UTC
   signed_url: (bucket, key, expiration, opts={}) =>
+    {:headers, :verb, :scheme} = opts
+
+    verb or= "GET"
+    scheme or= "https"
+
     key = url_encode_key key
 
     path = "/#{bucket}/#{key}"
     expiration = tostring expiration
-
-    verb = opts.verb or "GET"
 
     elements = {
       verb
@@ -319,8 +322,8 @@ class CloudStorage
     }
 
     -- 'As Needed', not required
-    if opts.headers and next opts.headers
-      table.insert elements, @canonicalize_headers(opts.headers)
+    if headers and next headers
+      table.insert elements, @canonicalize_headers headers
 
     table.insert elements, "" -- trailing newline
 
@@ -336,7 +339,7 @@ class CloudStorage
       })
 
     concat {
-      "https://#{@url_base}"
+      "#{scheme}://#{@url_base}"
       path
       "?GoogleAccessId=", @oauth.client_email
       "&Expires=", expiration
@@ -346,7 +349,7 @@ class CloudStorage
   upload_url: (bucket, key, opts={}) =>
     {
       :content_disposition, :filename, :acl, :success_action_redirect,
-      :expires, :size_limit
+      :expires, :size_limit, :scheme
     } = opts
 
     expires or= os.time! + 60^2
@@ -373,10 +376,7 @@ class CloudStorage
 
     policy, signature = @encode_and_sign_policy expires, policy
 
-    action = @bucket_url bucket, subdomain: true
-
-    if opts.https == false
-      action = action\gsub("^https:", "http:") or action
+    action = @bucket_url bucket, subdomain: true, :scheme
 
     params = {
       :acl, :policy, :signature, :key

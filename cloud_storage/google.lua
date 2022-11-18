@@ -462,18 +462,21 @@ do
       if opts == nil then
         opts = { }
       end
+      local headers, verb, scheme
+      headers, verb, scheme = opts.headers, opts.verb, opts.scheme
+      verb = verb or "GET"
+      scheme = scheme or "https"
       key = url_encode_key(key)
       local path = "/" .. tostring(bucket) .. "/" .. tostring(key)
       expiration = tostring(expiration)
-      local verb = opts.verb or "GET"
       local elements = {
         verb,
         "",
         "",
         expiration
       }
-      if opts.headers and next(opts.headers) then
-        table.insert(elements, self:canonicalize_headers(opts.headers))
+      if headers and next(headers) then
+        table.insert(elements, self:canonicalize_headers(headers))
       end
       table.insert(elements, "")
       local str = concat(elements, "\n")
@@ -487,7 +490,7 @@ do
         }))
       end
       return concat({
-        "https://" .. tostring(self.url_base),
+        tostring(scheme) .. "://" .. tostring(self.url_base),
         path,
         "?GoogleAccessId=",
         self.oauth.client_email,
@@ -501,8 +504,8 @@ do
       if opts == nil then
         opts = { }
       end
-      local content_disposition, filename, acl, success_action_redirect, expires, size_limit
-      content_disposition, filename, acl, success_action_redirect, expires, size_limit = opts.content_disposition, opts.filename, opts.acl, opts.success_action_redirect, opts.expires, opts.size_limit
+      local content_disposition, filename, acl, success_action_redirect, expires, size_limit, scheme
+      content_disposition, filename, acl, success_action_redirect, expires, size_limit, scheme = opts.content_disposition, opts.filename, opts.acl, opts.success_action_redirect, opts.expires, opts.size_limit, opts.scheme
       expires = expires or (os.time() + 60 ^ 2)
       acl = acl or "project-private"
       if filename then
@@ -544,11 +547,9 @@ do
       local signature
       policy, signature = self:encode_and_sign_policy(expires, policy)
       local action = self:bucket_url(bucket, {
-        subdomain = true
+        subdomain = true,
+        scheme = scheme
       })
-      if opts.https == false then
-        action = action:gsub("^https:", "http:") or action
-      end
       local params = {
         acl = acl,
         policy = policy,
