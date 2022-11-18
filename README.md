@@ -38,7 +38,13 @@ local storage = google.CloudStorage:from_json_key_file("path/to/my-key.json")
 local files = assert(storage:get_bucket("my_bucket"))
 ```
 
+<details>
+
+<summary>
+
 ## Using a p12/pem secret key
+
+</summary>
 
 Use these directions only if you have a key created with the `P12` type.
 
@@ -71,6 +77,8 @@ local storage = google.CloudStorage(o, "cloud-storage")
 
 local files = assert(storage:get_bucket("my_bucket"))
 ```
+
+</details>
 
 ## Reference
 
