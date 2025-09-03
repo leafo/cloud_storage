@@ -277,7 +277,7 @@ describe "cloud_storage", ->
 
         assert.same http_requests, {
           {
-            url: "https://storage.googleapis.com/mybucket/hello.txt"
+            url: "https://storage.googleapis.com/mybucket/hello%2etxt"
             method: "PUT"
             source: "the contents"
             headers: {
@@ -381,6 +381,213 @@ describe "cloud_storage", ->
           "Invalid key for deletion (missing or empty string)"
         )
 
+        assert.same {}, http_requests
+
+      it "get_service", ->
+        storage\get_service!
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/"
+            method: "GET"
+            headers: {
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "head_file", ->
+        storage\head_file "mybucket", "test/file.txt"
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/test%2ffile%2etxt"
+            method: "HEAD"
+            headers: {
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "head_file fails with empty key", ->
+        assert.has_error(
+          -> storage\head_file "mybucket", ""
+          "Invalid key (missing or empty string)"
+        )
+        assert.same {}, http_requests
+
+      it "put_file_acl", ->
+        storage\put_file_acl "mybucket", "test.txt", "private"
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/test%2etxt?acl"
+            method: "PUT"
+            headers: {
+              "Content-length": 0
+              "x-goog-acl": "private"
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "put_file_acl fails with empty key", ->
+        assert.has_error(
+          -> storage\put_file_acl "mybucket", "", "private"
+          "Invalid key (missing or empty string)"
+        )
+        assert.same {}, http_requests
+
+      it "start_resumable_upload", ->
+        storage\start_resumable_upload "mybucket", "large-file.dat", {
+          mimetype: "application/octet-stream"
+          acl: "public-read"
+        }
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/large%2dfile%2edat"
+            method: "POST"
+            headers: {
+              "Content-type": "application/octet-stream"
+              "Content-length": 0
+              "x-goog-acl": "public-read"
+              "x-goog-resumable": "start"
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "start_resumable_upload with key in options", ->
+        storage\start_resumable_upload "mybucket", {
+          key: "alternate.dat"
+          acl: "private"
+        }
+        assert.same {
+          {
+            url: "https://storage.googleapis.com/mybucket/alternate%2edat"
+            method: "POST"
+            headers: {
+              "Content-length": 0
+              "x-goog-acl": "private"
+              "x-goog-resumable": "start"
+              "x-goog-api-version": 2
+              "x-goog-project-id": "111111111111"
+              Authorization: "OAuth my-fake-access-token"
+            }
+          }
+        }, http_requests
+
+      it "compose files", ->
+        storage\compose "mybucket", "composed.txt", {"part1.txt", "part2.txt"}, {
+          acl: "public-read"
+        }
+        assert.same 1, #http_requests
+        request = http_requests[1]
+        assert.same "https://storage.googleapis.com/mybucket/composed%2etxt?compose", request.url
+        assert.same "PUT", request.method
+        assert.truthy request.source\find "<ComposeRequest>"
+        assert.truthy request.source\find "<Name>part1.txt</Name>"
+        assert.truthy request.source\find "<Name>part2.txt</Name>"
+        assert.same "public-read", request.headers["x-goog-acl"]
+
+      it "compose files with generation", ->
+        storage\compose "mybucket", "composed.txt", {
+          {name: "part1.txt", generation: "123"}
+          "part2.txt"
+        }
+        request = http_requests[1]
+        assert.truthy request.source\find "<Generation>123</Generation>"
+        assert.truthy request.source\find "<Name>part1.txt</Name>"
+        assert.truthy request.source\find "<Name>part2.txt</Name>"
+
+      it "encode_and_sign_policy", ->
+        conditions = {
+          {"eq", "$key", "test.txt"}
+          {"content-length-range", 0, 1024}
+        }
+        policy, signature = storage\encode_and_sign_policy 1000, conditions
+
+        assert.truthy policy
+        assert.truthy signature
+
+        mime = require "mime"
+        json = require "cjson"
+
+        decoded_policy_str = mime.unb64 policy
+        assert.truthy decoded_policy_str
+        decoded_policy = json.decode decoded_policy_str
+        assert.same "1970-01-01T00:16:40Z", decoded_policy.expiration
+        assert.same conditions, decoded_policy.conditions
+
+      it "encode_and_sign_policy with string expiration", ->
+        conditions = {{"eq", "$key", "test.txt"}}
+        policy, signature = storage\encode_and_sign_policy "2025-01-01T00:00:00Z", conditions
+
+        mime = require "mime"
+        json = require "cjson"
+
+        decoded_policy_str = mime.unb64 policy
+        assert.truthy decoded_policy_str
+        decoded_policy = json.decode decoded_policy_str
+        assert.same "2025-01-01T00:00:00Z", decoded_policy.expiration
+
+      it "put_file reads from filesystem", ->
+        -- Store original io.open
+        original_io_open = io.open
+        stub(io, "open", (filename, mode) ->
+          if filename == "test_upload.txt"
+            return {
+              read: (self, format) -> "test file content"
+              close: ->
+            }
+          else
+            original_io_open filename, mode  -- use original for other files
+        )
+
+        -- Test the basic functionality without key override
+        storage\put_file "mybucket", "test_upload.txt", {
+          acl: "private"
+        }
+
+        assert.same 1, #http_requests
+        request = http_requests[1]
+        assert.same "https://storage.googleapis.com/mybucket/test_upload%2etxt", request.url
+        assert.same "PUT", request.method
+        assert.same "test file content", request.source
+        assert.same "private", request.headers["x-goog-acl"]
+        assert.same "text/plain", request.headers["Content-type"]
+
+      it "put_file uses filename as key by default", ->
+        -- Store original io.open
+        original_io_open = io.open
+        stub(io, "open", (filename, mode) ->
+          if filename == "test_default.txt"
+            return {
+              read: (self, format) -> "default key test"
+              close: ->
+            }
+          else
+            original_io_open filename, mode  -- use original for other files
+        )
+
+        storage\put_file "mybucket", "test_default.txt"
+
+        request = http_requests[1]
+        assert.same "https://storage.googleapis.com/mybucket/test_default%2etxt", request.url
+        assert.same "default key test", request.source
+
+      it "put_file fails with missing file", ->
+        stub(io, "open", -> nil)  -- simulate file not found
+
+        assert.has_error(
+          -> storage\put_file "mybucket", "nonexistent.txt"
+          "Failed to read file: nonexistent.txt"
+        )
         assert.same {}, http_requests
 
   describe "with storage from json key", ->
