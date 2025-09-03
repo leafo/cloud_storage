@@ -1,5 +1,6 @@
+.PHONY: build local
 
-build::
+build:
 	moonc cloud_storage/
 
 local: build
@@ -12,3 +13,5 @@ local: build
 %.rsa.pem: %.p12
 	openssl pkcs12 -nodes -nocerts -in $< | openssl rsa -out $@ 
 
+tags::
+	moon-tags $$(git ls-files cloud_storage/ | grep '\.moon$$') > tags

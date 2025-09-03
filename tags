@@ -1,0 +1,64 @@
+!_TAG_FILE_FORMAT	2	/extended format/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	leaf corcoran	/leafot@gmail.com/
+!_TAG_PROGRAM_NAME	MoonTags	//
+!_TAG_PROGRAM_URL	https://github.com/leafo/moonscript	/GitHub repository/
+!_TAG_PROGRAM_VERSION	0.0.1	//
+
+Bucket	cloud_storage/google.moon	/^class Bucket$/;"	c	language:moon
+CloudStorage	cloud_storage/google.moon	/^class CloudStorage$/;"	c	language:moon
+File	cloud_storage/multipart.moon	/^class File$/;"	c	language:moon
+LOMFormatter	cloud_storage/google.moon	/^class LOMFormatter$/;"	c	language:moon
+MockStorage	cloud_storage/mock.moon	/^class MockStorage$/;"	c	language:moon
+OAuth	cloud_storage/oauth.moon	/^class OAuth$/;"	c	language:moon
+_full_path	cloud_storage/mock.moon	/^  _full_path: (bucket, key) =>/;"	f	language:moon class:MockStorage
+_headers	cloud_storage/google.moon	/^  _headers: =>/;"	f	language:moon class:CloudStorage
+_load_private_key	cloud_storage/oauth.moon	/^  _load_private_key: (str) =>/;"	f	language:moon class:OAuth
+_make_jwt	cloud_storage/oauth.moon	/^  _make_jwt: (client_email, private_key) =>/;"	f	language:moon class:OAuth
+_private_key	cloud_storage/oauth.moon	/^  _private_key: =>/;"	f	language:moon class:OAuth
+_request	cloud_storage/google.moon	/^  _request: (method="GET", path, data, headers) =>/;"	f	language:moon class:CloudStorage
+bucket	cloud_storage/google.moon	/^  bucket: (bucket) =>/;"	f	language:moon class:CloudStorage
+bucket	cloud_storage/mock.moon	/^  bucket: (bucket) =>/;"	f	language:moon class:MockStorage
+bucket_url	cloud_storage/google.moon	/^  bucket_url: (bucket, opts={}) =>/;"	f	language:moon class:CloudStorage
+canonicalize_headers	cloud_storage/google.moon	/^  canonicalize_headers: (headers) =>/;"	f	language:moon class:CloudStorage
+compose	cloud_storage/google.moon	/^  compose: (bucket, key, source_keys, options={}) =>/;"	f	language:moon class:CloudStorage
+content	cloud_storage/multipart.moon	/^  content: =>/;"	f	language:moon class:File
+copy_file	cloud_storage/google.moon	/^  copy_file: (source_bucket, source_key, dest_bucket, dest_key, options={}) =>/;"	f	language:moon class:CloudStorage
+delete_file	cloud_storage/google.moon	/^  delete_file: (bucket, key) =>/;"	f	language:moon class:CloudStorage
+delete_file	cloud_storage/mock.moon	/^  delete_file: (bucket, key) =>/;"	f	language:moon class:MockStorage
+encode	cloud_storage/multipart.moon	/^encode = (params) ->/;"	f	language:moon
+encode_and_sign_policy	cloud_storage/google.moon	/^  encode_and_sign_policy: (expiration, conditions) =>/;"	f	language:moon class:CloudStorage
+encode_tbl	cloud_storage/multipart.moon	/^encode_tbl = (params) ->/;"	f	language:moon
+file_url	cloud_storage/google.moon	/^  file_url: (bucket, key, opts) =>/;"	f	language:moon class:CloudStorage
+file_url	cloud_storage/mock.moon	/^  file_url: (bucket, key) =>/;"	f	language:moon class:MockStorage
+format	cloud_storage/google.moon	/^  format: (res, code, headers) =>/;"	f	language:moon class:LOMFormatter
+from_json_key_file	cloud_storage/google.moon	/^  @from_json_key_file: (file) =>/;"	f	language:moon class:CloudStorage
+get	cloud_storage/http.moon	/^get = ->/;"	f	language:moon
+get_access_token	cloud_storage/oauth.moon	/^  get_access_token: =>/;"	f	language:moon class:OAuth
+get_bucket	cloud_storage/google.moon	/^  get_bucket: (bucket) =>/;"	f	language:moon class:CloudStorage
+get_bucket	cloud_storage/mock.moon	/^  get_bucket: (bucket) =>/;"	f	language:moon class:MockStorage
+get_file	cloud_storage/google.moon	/^  get_file: (bucket, key, opts) =>/;"	f	language:moon class:CloudStorage
+get_file	cloud_storage/mock.moon	/^  get_file: (bucket, key) =>/;"	f	language:moon class:MockStorage
+get_service	cloud_storage/google.moon	/^  get_service: =>/;"	f	language:moon class:CloudStorage
+get_service	cloud_storage/mock.moon	/^  get_service: =>/;"	f	language:moon class:MockStorage
+head_file	cloud_storage/google.moon	/^  head_file: (bucket, key) =>/;"	f	language:moon class:CloudStorage
+head_file	cloud_storage/mock.moon	/^  head_file: (bucket, key) =>/;"	f	language:moon class:MockStorage
+mime	cloud_storage/multipart.moon	/^  mime: =>/;"	f	language:moon class:File
+new	cloud_storage/google.moon	/^  new: (@bucket_name, @storage) =>/;"	f	language:moon class:Bucket
+new	cloud_storage/google.moon	/^  new: (@oauth, @project_id) =>/;"	f	language:moon class:CloudStorage
+new	cloud_storage/google.moon	/^  new: =>/;"	f	language:moon class:LOMFormatter
+new	cloud_storage/mock.moon	/^  new: (@dir_name="\.", @url_prefix="") =>/;"	f	language:moon class:MockStorage
+new	cloud_storage/multipart.moon	/^  new: (@fname) =>/;"	f	language:moon class:File
+new	cloud_storage/oauth.moon	/^  new: (@client_email, @private_key_file) =>/;"	f	language:moon class:OAuth
+put_file	cloud_storage/google.moon	/^  put_file: (bucket, fname, options={}) =>/;"	f	language:moon class:CloudStorage
+put_file	cloud_storage/mock.moon	/^  put_file: (bucket, fname, options={}) =>/;"	f	language:moon class:MockStorage
+put_file_acl	cloud_storage/google.moon	/^  put_file_acl: (bucket, key, acl) =>/;"	f	language:moon class:CloudStorage
+put_file_string	cloud_storage/google.moon	/^  put_file_string: (bucket, key, data, options={}) =>/;"	f	language:moon class:CloudStorage
+put_file_string	cloud_storage/mock.moon	/^  put_file_string: (bucket, key, data, options={}) =>/;"	f	language:moon class:MockStorage
+refresh_access_token	cloud_storage/oauth.moon	/^  refresh_access_token: =>/;"	f	language:moon class:OAuth
+set	cloud_storage/http.moon	/^set = (http) ->/;"	f	language:moon
+sign_string	cloud_storage/oauth.moon	/^  sign_string: (string) =>/;"	f	language:moon class:OAuth
+signed_url	cloud_storage/google.moon	/^  signed_url: (bucket, key, expiration, opts={}) =>/;"	f	language:moon class:CloudStorage
+start_resumable_upload	cloud_storage/google.moon	/^  start_resumable_upload: (bucket, key, options={}) =>/;"	f	language:moon class:CloudStorage
+upload_url	cloud_storage/google.moon	/^  upload_url: (bucket, key, opts={}) =>/;"	f	language:moon class:CloudStorage
+url_encode_key	cloud_storage/google.moon	/^url_encode_key = (key) ->/;"	f	language:moon
