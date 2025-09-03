@@ -18,6 +18,131 @@ describe "cloud_storage", ->
     it "should make jwt", ->
       assert.truthy o\_make_jwt o.client_email, o.private_key
 
+    describe "private key loading", ->
+      it "should load private key from file", ->
+        key = o\_private_key!
+        assert.truthy key
+
+      it "should load private key from string", ->
+        key_content = assert(io.open(TEST_KEY_PATH))\read "*a"
+        o\_load_private_key key_content
+        key = o\_private_key!
+        assert.truthy key
+
+      it "should fail with invalid key file", ->
+        bad_oauth = oauth.OAuth "leaf@leafo.net", "nonexistent.pem"
+        assert.has_error(
+          -> bad_oauth\_private_key!
+        )
+
+        -- invalid file type
+        bad_oauth = oauth.OAuth "leaf@leafo.net", "spec/cloud_storage_spec.moon"
+        assert.has_error(
+          -> bad_oauth\_private_key!
+        )
+
+    describe "string signing", ->
+      -- this should be deterministic since the key is stored in the test suite
+      it "should sign string and return base64", ->
+        signature = o\sign_string "test string"
+        assert.same "Z1x1HRvpY9tWnf+O1HU3D+A7VNHY4LTem4YUORBS6r4rrbYjYhgUntEy9hfwoPeFyilBY4K6mGYctUBBnRAybcqWWDz68rmS0zR3ROy/pBfFGrcbRoFVwQnx/nVliqUH6+i3iPUE/S7haPh6b8O0yy3ltZBhuAYfZAinJiS4mVM=", signature
+
+      it "should produce consistent signatures", ->
+        sig1 = o\sign_string "consistent test"
+        sig2 = o\sign_string "consistent test"
+        assert.same sig1, sig2
+
+    describe "token management", ->
+      local http_requests
+      local snapshot
+
+      json = require "cjson"
+
+      before_each ->
+        snapshot = assert\snapshot!
+        http_requests = {}
+
+        http = require("cloud_storage.http")
+        stub(http, "get", {
+          request: (url, params) ->
+            table.insert http_requests, {url: url, params: params}
+            return json.encode {
+              expires_in: 3600
+              access_token: "mock-access-token-123"
+            }
+        })
+
+      after_each ->
+        snapshot\revert!
+
+      it "should refresh access token", ->
+        token = o\refresh_access_token!
+        assert.same "mock-access-token-123", token
+        assert.same "mock-access-token-123", o.access_token
+        assert.truthy o.expires_at
+
+      it "should make proper JWT request format", ->
+        o\refresh_access_token!
+        assert.same 1, #http_requests
+        request = http_requests[1]
+        assert.same o.auth_url, request.url
+        assert.truthy request.params\find "grant_type"
+        assert.truthy request.params\find "assertion"
+
+      it "should cache tokens and not refresh when valid", ->
+        o.access_token = "existing-token"
+        o.expires_at = os.time! + 1000
+
+        token = o\get_access_token!
+        assert.same "existing-token", token
+        assert.same 0, #http_requests
+
+      it "should refresh expired tokens", ->
+        o.access_token = "old-token"
+        o.expires_at = os.time! - 100
+
+        token = o\get_access_token!
+        assert.same "mock-access-token-123", token
+        assert.same 1, #http_requests
+
+      describe "with auth errors", ->
+        before_each ->
+          http = require("cloud_storage.http")
+          stub(http, "get", {
+            request: (url, params) ->
+              table.insert http_requests, {url: url, params: params}
+              return json.encode { error: "invalid_grant" }
+          })
+
+        it "should handle auth errors", ->
+          assert.has_error(
+            -> o\refresh_access_token!
+            "Failed auth: invalid_grant"
+          )
+
+    describe "jwt creation", ->
+      it "should create valid jwt format", ->
+        jwt = o\_make_jwt o.client_email, o\_private_key!
+        parts = [part for part in jwt\gmatch "[^%.]+"]
+        assert.same 3, #parts
+
+      it "should include proper claims", ->
+        jwt = o\_make_jwt o.client_email, o\_private_key!
+        header_b64, claims_b64, sig = jwt\match "([^%.]+)%.([^%.]+)%.([^%.]+)"
+
+        mime = require "mime"
+        json = require "cjson"
+
+        assert.truthy claims_b64, "claims part should be present"
+        claims_str = mime.unb64 claims_b64
+        assert.truthy claims_str, "decoded claims should not be nil"
+        claims = json.decode claims_str
+        assert.same o.client_email, claims.iss
+        assert.same o.auth_url, claims.aud
+        assert.same o.scope.full_control, claims.scope
+        assert.truthy claims.iat
+        assert.truthy claims.exp
+
   describe "with storage", ->
     local storage
 
