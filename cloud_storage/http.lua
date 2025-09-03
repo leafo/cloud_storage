@@ -1,7 +1,7 @@
 local _http
 local default
 default = function()
-  return require("ssl.https")
+  return require("socket.http")
 end
 local get
 get = function()

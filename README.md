@@ -80,6 +80,22 @@ local files = assert(storage:get_bucket("my_bucket"))
 
 </details>
 
+## HTTP Client Customization
+
+By default, this library uses `socket.http` for making HTTP requests. You can provide a custom HTTP client that supports the LuaSocket interface:
+
+```lua
+local http = require("cloud_storage.http")
+
+-- Replace with your custom HTTP client
+-- Must implement a request() function compatible with LuaSocket
+http.set(require("lapis.http"))
+
+-- Now all future requests will use the `request` function in your http client...
+```
+
+This allows for custom timeout handling, proxy configuration, or mock clients for testing.
+
 ## Reference
 
 ### Module `cloud_storage.oauth`

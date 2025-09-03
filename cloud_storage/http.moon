@@ -4,7 +4,7 @@
 
 local _http
 
-default = -> require "ssl.https"
+default = -> require "socket.http"
 
 get = ->
   _http = default! unless _http
