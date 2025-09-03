@@ -209,7 +209,7 @@ class CloudStorage
     assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
     assert type(data) == "string", "expected string for data"
 
-    @_put "/#{bucket}/#{key}", data, extend {
+    @_put "/#{bucket}/#{url.escape key}", data, extend {
       "Content-length": #data
       "Content-type": options.mimetype
       "x-goog-acl": options.acl or "public-read"
@@ -242,7 +242,7 @@ class CloudStorage
       local name, generation, if_generation_match
 
       if type(key_obj) == "table"
-        {:name, :generation, :if_generation_match}
+        {:name, :generation, :if_generation_match} = key_obj
       else
         name = key_obj
 

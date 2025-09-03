@@ -315,7 +315,7 @@ do
       end
       assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       assert(type(data) == "string", "expected string for data")
-      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(key), data, extend({
+      return self:_put("/" .. tostring(bucket) .. "/" .. tostring(url.escape(key)), data, extend({
         ["Content-length"] = #data,
         ["Content-type"] = options.mimetype,
         ["x-goog-acl"] = options.acl or "public-read"
@@ -365,11 +365,7 @@ do
         local key_obj = source_keys[_index_0]
         local name, generation, if_generation_match
         if type(key_obj) == "table" then
-          local _ = {
-            name = name,
-            generation = generation,
-            if_generation_match = if_generation_match
-          }
+          name, generation, if_generation_match = key_obj.name, key_obj.generation, key_obj.if_generation_match
         else
           name = key_obj
         end
