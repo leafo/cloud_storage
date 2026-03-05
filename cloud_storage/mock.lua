@@ -94,7 +94,19 @@ do
           data = error("Failed to read file: " .. tostring(fname))
         end
       end
-      return self:put_file_string(bucket, data, options)
+      local key = options.key or fname
+      if options.key then
+        do
+          local _tbl_0 = { }
+          for k, v in pairs(options) do
+            if k ~= "key" then
+              _tbl_0[k] = v
+            end
+          end
+          options = _tbl_0
+        end
+      end
+      return self:put_file_string(bucket, key, data, options)
     end,
     delete_file = function(self, bucket, key)
       local path = self:_full_path(bucket, key)
@@ -131,28 +143,6 @@ do
   })
   _base_0.__class = _class_0
   MockStorage = _class_0
-end
-if ... == "test" then
-  local moon = require("moon")
-  local s = MockStorage("test_storage", "static")
-  print(s:_full_path("dad_bucket", "eat/my/sucks"))
-  print(MockStorage():_full_path("nobucket", "hello.world"))
-  print()
-  local b = s:bucket("my_bucket")
-  b:put_file_string("this is a file", {
-    key = "some_file.txt"
-  })
-  b:put_file_string("yeah", {
-    key = "something/with/path.cpp"
-  })
-  b:put_file("hi.lua", {
-    key = "cool/thing.lua"
-  })
-  moon.p(b:list())
-  b:delete_file("some_file.txt")
-  b:delete_file("cool/does_not_exist.txt")
-  moon.p(b:list())
-  print(b:file_url("cool/does_not_exist.txt"))
 end
 return {
   MockStorage = MockStorage

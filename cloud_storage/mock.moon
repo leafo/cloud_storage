@@ -59,7 +59,11 @@ class MockStorage
     else
       error "Failed to read file: #{fname}"
 
-    @put_file_string bucket, data, options
+    key = options.key or fname
+    if options.key
+      options = {k,v for k,v in pairs options when k != "key"}
+
+    @put_file_string bucket, key, data, options
 
   delete_file: (bucket, key) =>
     path = @_full_path bucket, key
@@ -68,30 +72,5 @@ class MockStorage
 
   get_file: (bucket, key) => error "not implemented"
   head_file: (bucket, key) => error "Not implemented"
-
-
-if ... == "test"
-  moon = require "moon"
-  s = MockStorage("test_storage", "static")
-
-  print s\_full_path "dad_bucket", "eat/my/sucks"
-  print MockStorage!\_full_path "nobucket", "hello.world"
-
-  print!
-
-  b = s\bucket "my_bucket"
-
-  b\put_file_string "this is a file", key: "some_file.txt"
-  b\put_file_string "yeah", key: "something/with/path.cpp"
-  b\put_file "hi.lua", key: "cool/thing.lua"
-
-  moon.p b\list!
-
-  b\delete_file "some_file.txt"
-  b\delete_file "cool/does_not_exist.txt"
-
-  moon.p b\list!
-
-  print b\file_url "cool/does_not_exist.txt"
 
 { :MockStorage }
