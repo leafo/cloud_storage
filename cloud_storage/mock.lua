@@ -415,12 +415,11 @@ do
       local size = (stat and stat.size) or #data
       local last_modified = stat and stat.last_modified
       local code = 200
-      local headers = {
+      return data, code, self:mock_headers({
         ["Content-length"] = size,
         ["Last-modified"] = last_modified,
         ["x-goog-generation"] = "mock"
-      }
-      headers = self:mock_headers(headers, {
+      }, {
         method = "GET",
         bucket = bucket,
         key = key,
@@ -430,7 +429,6 @@ do
         code = code,
         data = data
       })
-      return data, code, headers
     end,
     head_file = function(self, bucket, key)
       validate_bucket(bucket)
@@ -443,11 +441,10 @@ do
       local size = stat.size
       local last_modified = stat.last_modified
       local code = 200
-      local headers = {
+      return "", code, self:mock_headers({
         ["Content-length"] = size,
         ["Last-modified"] = last_modified
-      }
-      headers = self:mock_headers(headers, {
+      }, {
         method = "HEAD",
         bucket = bucket,
         key = key,
@@ -456,7 +453,6 @@ do
         last_modified = last_modified,
         code = code
       })
-      return "", code, headers
     end
   }
   _base_0.__index = _base_0

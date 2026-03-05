@@ -255,12 +255,12 @@ class MockStorage
     size = (stat and stat.size) or #data
     last_modified = stat and stat.last_modified
     code = 200
-    headers = {
+
+    data, code, @mock_headers {
       "Content-length": size
       "Last-modified": last_modified
       "x-goog-generation": "mock"
-    }
-    headers = @mock_headers headers, {
+    }, {
       method: "GET"
       :bucket
       :key
@@ -270,7 +270,6 @@ class MockStorage
       :code
       :data
     }
-    data, code, headers
 
   head_file: (bucket, key) =>
     validate_bucket bucket
@@ -281,11 +280,11 @@ class MockStorage
     size = stat.size
     last_modified = stat.last_modified
     code = 200
-    headers = {
+
+    "", code, @mock_headers {
       "Content-length": size
       "Last-modified": last_modified
-    }
-    headers = @mock_headers headers, {
+    }, {
       method: "HEAD"
       :bucket
       :key
@@ -294,6 +293,5 @@ class MockStorage
       :last_modified
       :code
     }
-    "", code, headers
 
 { :MockStorage, :validate_bucket, :validate_key, :FileSystemStorageInterface }
