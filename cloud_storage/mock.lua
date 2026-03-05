@@ -1,6 +1,31 @@
 local Bucket
 Bucket = require("cloud_storage.google").Bucket
 local lfs = require("lfs")
+local VALID_NAME_CHUNK = "^[%w%._%-]+$"
+local BUCKET_PATTERN = "^[a-z0-9][a-z0-9._-]*[a-z0-9]$"
+local BUCKET_MIN_LEN = 3
+local BUCKET_MAX_LEN = 63
+local validate_bucket
+validate_bucket = function(bucket)
+  assert(type(bucket) == "string" and bucket ~= "", "Invalid bucket (missing or empty string)")
+  assert(#bucket >= BUCKET_MIN_LEN and #bucket <= BUCKET_MAX_LEN, "Invalid bucket (unsafe length)")
+  assert(bucket:match(BUCKET_PATTERN), "Invalid bucket (unsafe characters)")
+  return bucket
+end
+local validate_key
+validate_key = function(key, message)
+  if message == nil then
+    message = "Invalid key (missing or empty string)"
+  end
+  assert(type(key) == "string" and key ~= "", message)
+  assert(not key:match("^/"), "Invalid key (unsafe path structure)")
+  assert(not key:match("/$"), "Invalid key (unsafe path structure)")
+  assert(not key:match("//"), "Invalid key (unsafe path structure)")
+  for chunk in key:gmatch("[^/]+") do
+    assert(chunk ~= "." and chunk ~= ".." and chunk:match(VALID_NAME_CHUNK), "Invalid key (unsafe characters)")
+  end
+  return key
+end
 local mkdir_p
 mkdir_p = function(path)
   local current
@@ -79,9 +104,12 @@ do
   local _class_0
   local _base_0 = {
     bucket = function(self, bucket)
+      validate_bucket(bucket)
       return Bucket(bucket, self)
     end,
     _full_path = function(self, bucket, key)
+      validate_bucket(bucket)
+      validate_key(key)
       local dir
       if self.dir_name == "." then
         dir = ""
@@ -94,6 +122,7 @@ do
       if opts == nil then
         opts = { }
       end
+      validate_bucket(bucket)
       if opts.scheme or opts.subdomain then
         local scheme = opts.scheme or "https"
         local base
@@ -124,6 +153,8 @@ do
       end
     end,
     file_url = function(self, bucket, key, opts)
+      validate_bucket(bucket)
+      validate_key(key)
       if opts and (opts.scheme or opts.subdomain) then
         return tostring(self:bucket_url(bucket, opts)) .. "/" .. tostring(key)
       else
@@ -165,6 +196,7 @@ do
       return out
     end,
     get_bucket = function(self, bucket)
+      validate_bucket(bucket)
       local path = tostring(self.dir_name) .. "/" .. tostring(bucket)
       mkdir_p(path)
       local files = list_files(path)
@@ -195,11 +227,12 @@ do
       if options == nil then
         options = { }
       end
+      validate_bucket(bucket)
       assert(not options.key, "key is not an option, but an argument")
       if type(data) == "table" then
         error("put_file_string interface has changed: key is now the second argument")
       end
-      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
+      validate_key(key)
       assert(type(data) == "string", "expected string for data")
       local path = self:_full_path(bucket, key)
       local dir = path:match("(.+)/")
@@ -215,6 +248,7 @@ do
       if options == nil then
         options = { }
       end
+      validate_bucket(bucket)
       local data
       do
         local f = io.open(fname)
@@ -243,13 +277,19 @@ do
       return self:put_file_string(bucket, key, data, options)
     end,
     delete_file = function(self, bucket, key)
-      assert(type(key) == "string" and key ~= "", "Invalid key for deletion (missing or empty string)")
+      validate_bucket(bucket)
+      validate_key(key, "Invalid key for deletion (missing or empty string)")
       local path = self:_full_path(bucket, key)
-      os.remove(path)
-      return 200
+      if lfs.attributes(path, "mode") then
+        os.remove(path)
+        return 200
+      else
+        return nil, "File not found: " .. tostring(key)
+      end
     end,
     get_file = function(self, bucket, key)
-      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
+      validate_bucket(bucket)
+      validate_key(key)
       local path = self:_full_path(bucket, key)
       local f = io.open(path)
       if not (f) then
@@ -265,7 +305,8 @@ do
       }
     end,
     head_file = function(self, bucket, key)
-      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
+      validate_bucket(bucket)
+      validate_key(key)
       local path = self:_full_path(bucket, key)
       local f = io.open(path)
       if not (f) then
@@ -304,5 +345,7 @@ do
   MockStorage = _class_0
 end
 return {
-  MockStorage = MockStorage
+  MockStorage = MockStorage,
+  validate_bucket = validate_bucket,
+  validate_key = validate_key
 }

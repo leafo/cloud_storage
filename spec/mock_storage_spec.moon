@@ -1,4 +1,6 @@
 mock = require "cloud_storage.mock"
+validate_bucket = mock.validate_bucket
+validate_key = mock.validate_key
 
 TEST_ROOT = "spec/tmp/mock_storage"
 
@@ -94,7 +96,7 @@ describe "mock_storage", ->
     bucket\put_file_string "cool/thing.lua", "thing"
 
     assert.same 200, bucket\delete_file "some_file.txt"
-    assert.same 200, bucket\delete_file "cool/does_not_exist.txt"
+    assert.same nil, (bucket\delete_file "cool/does_not_exist.txt")
 
     assert.same {"cool/thing.lua"}, list_keys bucket\list!
 
@@ -135,4 +137,125 @@ describe "mock_storage", ->
     assert.has_error(
       -> storage\delete_file "my_bucket", ""
       "Invalid key for deletion (missing or empty string)"
+    )
+
+  it "rejects unsafe bucket and key names", ->
+    assert.has_error(
+      -> storage\bucket "../bucket"
+      "Invalid bucket (unsafe characters)"
+    )
+    assert.has_error(
+      -> storage\get_bucket "bad/bucket"
+      "Invalid bucket (unsafe characters)"
+    )
+
+    assert.has_error(
+      -> storage\put_file_string "my_bucket", "../escape.txt", "x"
+      "Invalid key (unsafe characters)"
+    )
+    assert.has_error(
+      -> storage\put_file_string "my_bucket", "a//b.txt", "x"
+      "Invalid key (unsafe path structure)"
+    )
+    assert.has_error(
+      -> storage\get_file "my_bucket", "a/$bad.txt"
+      "Invalid key (unsafe characters)"
+    )
+
+describe "mock_storage validators", ->
+  it "accepts valid bucket names", ->
+    valid = {
+      "my-bucket"
+      "bucket_1"
+      "bucket.name"
+      "z9-_a"
+      "abc"
+      "a" .. ("b"\rep 61) .. "z"
+    }
+
+    for bucket in *valid
+      assert.same bucket, validate_bucket bucket
+
+  it "rejects invalid bucket names", ->
+    invalid = {
+      nil
+      ""
+      "ab"
+      "a" .. ("b"\rep 62) .. "z"
+      "."
+      ".."
+      "A"
+      "Bucket"
+      "my/bucket"
+      "with space"
+      "dollar$"
+      "bucket:bad"
+      "-start"
+      "end-"
+      "_start"
+      "end_"
+      ".start"
+      "end."
+    }
+
+    for bucket in *invalid
+      assert.has_error(
+        -> validate_bucket bucket
+      )
+
+  it "accepts valid keys", ->
+    valid = {
+      "a"
+      "a.txt"
+      "folder/file.txt"
+      "folder_1/sub-folder/file.name-01"
+      "A/B/C"
+      "0/9/_/dot.name-"
+    }
+
+    for key in *valid
+      assert.same key, validate_key key
+
+  it "rejects invalid key path structures", ->
+    invalid = {
+      nil
+      ""
+      "/leading.txt"
+      "trailing.txt/"
+      "double//slash.txt"
+      "."
+      ".."
+      "./file.txt"
+      "../file.txt"
+      "folder/./file.txt"
+      "folder/../file.txt"
+    }
+
+    for key in *invalid
+      assert.has_error(
+        -> validate_key key
+      )
+
+  it "rejects invalid key characters", ->
+    invalid = {
+      "space name.txt"
+      "dollar$.txt"
+      "semi;colon.txt"
+      "quote\".txt"
+      "single'.txt"
+      "tab\tname.txt"
+      "colon:name.txt"
+      "folder/inv@lid.txt"
+    }
+
+    for key in *invalid
+      assert.has_error(
+        -> validate_key key
+        "Invalid key (unsafe characters)"
+      )
+
+  it "uses custom missing-key error message", ->
+    assert.has_error(
+      -> validate_key "", "Custom missing key"
+      "Custom missing key"
     )
