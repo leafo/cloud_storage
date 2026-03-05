@@ -26,78 +26,147 @@ validate_key = function(key, message)
   end
   return key
 end
-local mkdir_p
-mkdir_p = function(path)
-  local current
-  if path:match("^/") then
-    current = "/"
-  else
-    current = ""
-  end
-  for part in path:gmatch("[^/]+") do
-    current = current .. (((function()
-      if current == "" or current == "/" then
-        return ""
+local FileSystemStorageInterface
+do
+  local _class_0
+  local _base_0 = {
+    mkdir_p = function(self, path)
+      local current
+      if path:match("^/") then
+        current = "/"
       else
-        return "/"
+        current = ""
       end
-    end)()) .. part)
-    local ok, err = lfs.mkdir(current)
-    if not ok then
-      local mode = lfs.attributes(current, "mode")
-      assert(mode == "directory", err)
-    end
-  end
-  return true
-end
-local file_stat
-file_stat = function(path)
-  local attr = lfs.attributes(path)
-  if not (attr) then
-    return nil
-  end
-  return attr.size, os.date("!%Y-%m-%dT%H:%M:%SZ", attr.modification)
-end
-local list_files
-list_files = function(base_path)
-  local results = { }
-  local scan
-  scan = function(dir, prefix)
-    for entry in lfs.dir(dir) do
-      local _continue_0 = false
-      repeat
-        if entry == "." or entry == ".." then
+      for part in path:gmatch("[^/]+") do
+        current = current .. (((function()
+          if current == "" or current == "/" then
+            return ""
+          else
+            return "/"
+          end
+        end)()) .. part)
+        local ok, err = lfs.mkdir(current)
+        if not ok then
+          local mode = lfs.attributes(current, "mode")
+          assert(mode == "directory", err)
+        end
+      end
+      return true
+    end,
+    file_stat = function(self, path)
+      local attr = lfs.attributes(path)
+      if not (attr) then
+        return nil
+      end
+      return {
+        size = attr.size,
+        last_modified = os.date("!%Y-%m-%dT%H:%M:%SZ", attr.modification)
+      }
+    end,
+    list_dirs = function(self, path)
+      local out = { }
+      for entry in lfs.dir(path) do
+        local _continue_0 = false
+        repeat
+          if entry == "." or entry == ".." then
+            _continue_0 = true
+            break
+          end
+          local full = tostring(path) .. "/" .. tostring(entry)
+          if lfs.attributes(full, "mode") == "directory" then
+            table.insert(out, entry)
+          end
           _continue_0 = true
+        until true
+        if not _continue_0 then
           break
         end
-        local full = tostring(dir) .. "/" .. tostring(entry)
-        local mode = lfs.attributes(full, "mode")
-        if mode == "file" then
-          table.insert(results, (function()
-            if prefix == "" then
-              return entry
-            else
-              return tostring(prefix) .. "/" .. tostring(entry)
-            end
-          end)())
-        elseif mode == "directory" then
-          scan(full, ((function()
-            if prefix == "" then
-              return entry
-            else
-              return tostring(prefix) .. "/" .. tostring(entry)
-            end
-          end)()))
-        end
-        _continue_0 = true
-      until true
-      if not _continue_0 then
-        break
       end
+      table.sort(out)
+      return out
+    end,
+    list_files_recursive = function(self, base_path)
+      local results = { }
+      local scan
+      scan = function(dir, prefix)
+        for entry in lfs.dir(dir) do
+          local _continue_0 = false
+          repeat
+            if entry == "." or entry == ".." then
+              _continue_0 = true
+              break
+            end
+            local full = tostring(dir) .. "/" .. tostring(entry)
+            local mode = lfs.attributes(full, "mode")
+            if mode == "file" then
+              table.insert(results, (function()
+                if prefix == "" then
+                  return entry
+                else
+                  return tostring(prefix) .. "/" .. tostring(entry)
+                end
+              end)())
+            elseif mode == "directory" then
+              scan(full, ((function()
+                if prefix == "" then
+                  return entry
+                else
+                  return tostring(prefix) .. "/" .. tostring(entry)
+                end
+              end)()))
+            end
+            _continue_0 = true
+          until true
+          if not _continue_0 then
+            break
+          end
+        end
+      end
+      scan(base_path, "")
+      return results
+    end,
+    read_file = function(self, path)
+      local f = io.open(path)
+      if not (f) then
+        return nil
+      end
+      local data = f:read("*a")
+      f:close()
+      return data
+    end,
+    write_file = function(self, path, data)
+      local dir = path:match("(.+)/")
+      if dir then
+        self:mkdir_p(dir)
+      end
+      local f = assert(io.open(path, "w"))
+      assert(f:write(data))
+      f:close()
+      return true
+    end,
+    delete_file = function(self, path)
+      if not (lfs.attributes(path, "mode")) then
+        return nil
+      end
+      os.remove(path)
+      return true
     end
-  end
-  scan(base_path, "")
-  return results
+  }
+  _base_0.__index = _base_0
+  _class_0 = setmetatable({
+    __init = function() end,
+    __base = _base_0,
+    __name = "FileSystemStorageInterface"
+  }, {
+    __index = _base_0,
+    __call = function(cls, ...)
+      local _self_0 = setmetatable({}, _base_0)
+      cls.__init(_self_0, ...)
+      return _self_0
+    end
+  })
+  _base_0.__class = _class_0
+  FileSystemStorageInterface = _class_0
 end
 local MockStorage
 do
@@ -172,37 +241,28 @@ do
     end,
     get_service = function(self)
       local path = self.dir_name
-      mkdir_p(path)
-      local out = { }
-      for entry in lfs.dir(path) do
-        local _continue_0 = false
-        repeat
-          if entry == "." or entry == ".." then
-            _continue_0 = true
-            break
-          end
-          local full = tostring(path) .. "/" .. tostring(entry)
-          if lfs.attributes(full, "mode") == "directory" then
-            table.insert(out, {
-              name = entry
-            })
-          end
-          _continue_0 = true
-        until true
-        if not _continue_0 then
-          break
+      self.fs:mkdir_p(path)
+      local out
+      do
+        local _accum_0 = { }
+        local _len_0 = 1
+        local _list_0 = self.fs:list_dirs(path)
+        for _index_0 = 1, #_list_0 do
+          local entry = _list_0[_index_0]
+          _accum_0[_len_0] = {
+            name = entry
+          }
+          _len_0 = _len_0 + 1
         end
+        out = _accum_0
       end
-      table.sort(out, function(a, b)
-        return a.name < b.name
-      end)
       return out
     end,
     get_bucket = function(self, bucket)
       validate_bucket(bucket)
       local path = tostring(self.dir_name) .. "/" .. tostring(bucket)
-      mkdir_p(path)
-      local files = list_files(path)
+      self.fs:mkdir_p(path)
+      local files = self.fs:list_files_recursive(path)
       local out
       do
         local _accum_0 = { }
@@ -210,11 +270,11 @@ do
         for _index_0 = 1, #files do
           local file = files[_index_0]
           local full_path = tostring(path) .. "/" .. tostring(file)
-          local size, last_modified = file_stat(full_path)
+          local stat = self.fs:file_stat(full_path)
           local _value_0 = {
             key = file,
-            size = size,
-            last_modified = last_modified
+            size = stat and stat.size,
+            last_modified = stat and stat.last_modified
           }
           _accum_0[_len_0] = _value_0
           _len_0 = _len_0 + 1
@@ -238,13 +298,7 @@ do
       validate_key(key)
       assert(type(data) == "string", "expected string for data")
       local path = self:_full_path(bucket, key)
-      local dir = path:match("(.+)/")
-      if dir then
-        mkdir_p(dir)
-      end
-      local f = assert(io.open(path, "w"))
-      assert(f:write(data))
-      f:close()
+      self.fs:write_file(path, data)
       return 200
     end,
     put_file = function(self, bucket, fname, options)
@@ -252,18 +306,9 @@ do
         options = { }
       end
       validate_bucket(bucket)
-      local data
-      do
-        local f = io.open(fname)
-        if f then
-          do
-            local _with_0 = f:read("*a")
-            f:close()
-            data = _with_0
-          end
-        else
-          data = error("Failed to read file: " .. tostring(fname))
-        end
+      local data = self.fs:read_file(fname)
+      if not (data) then
+        error("Failed to read file: " .. tostring(fname))
       end
       local key = options.key or fname
       if options.key then
@@ -293,12 +338,10 @@ do
       validate_bucket(dest_bucket)
       validate_key(dest_key)
       local source_path = self:_full_path(source_bucket, source_key)
-      local f = io.open(source_path)
-      if not (f) then
+      local data = self.fs:read_file(source_path)
+      if not (data) then
         return nil, "File not found: " .. tostring(source_key)
       end
-      local data = f:read("*a")
-      f:close()
       return self:put_file_string(dest_bucket, dest_key, data)
     end,
     compose = function(self, bucket, key, source_keys, options)
@@ -320,12 +363,10 @@ do
         assert(name, "missing source key name for compose")
         validate_key(name)
         local source_path = self:_full_path(bucket, name)
-        local f = io.open(source_path)
-        if not (f) then
+        local data = self.fs:read_file(source_path)
+        if not (data) then
           return nil, "File not found: " .. tostring(name)
         end
-        local data = f:read("*a")
-        f:close()
         table.insert(chunks, data)
       end
       return self:put_file_string(bucket, key, table.concat(chunks))
@@ -334,8 +375,7 @@ do
       validate_bucket(bucket)
       validate_key(key, "Invalid key for deletion (missing or empty string)")
       local path = self:_full_path(bucket, key)
-      if lfs.attributes(path, "mode") then
-        os.remove(path)
+      if self.fs:delete_file(path) then
         return 200
       else
         return nil, "File not found: " .. tostring(key)
@@ -345,16 +385,16 @@ do
       validate_bucket(bucket)
       validate_key(key)
       local path = self:_full_path(bucket, key)
-      local f = io.open(path)
-      if not (f) then
+      local data = self.fs:read_file(path)
+      if not (data) then
         return nil, "File not found: " .. tostring(key)
       end
-      local data = f:read("*a")
-      f:close()
-      local size, last_modified = file_stat(path)
+      local stat = self.fs:file_stat(path)
+      local size = (stat and stat.size) or #data
+      local last_modified = stat and stat.last_modified
       local code = 200
       local headers = {
-        ["Content-length"] = #data,
+        ["Content-length"] = size,
         ["Last-modified"] = last_modified,
         ["x-goog-generation"] = "mock"
       }
@@ -374,12 +414,12 @@ do
       validate_bucket(bucket)
       validate_key(key)
       local path = self:_full_path(bucket, key)
-      local f = io.open(path)
-      if not (f) then
+      local stat = self.fs:file_stat(path)
+      if not (stat) then
         return nil, "File not found: " .. tostring(key)
       end
-      f:close()
-      local size, last_modified = file_stat(path)
+      local size = stat.size
+      local last_modified = stat.last_modified
       local code = 200
       local headers = {
         ["Content-length"] = size,
@@ -407,6 +447,7 @@ do
         url_prefix = ""
       end
       self.dir_name, self.url_prefix = dir_name, url_prefix
+      self.fs = FileSystemStorageInterface()
     end,
     __base = _base_0,
     __name = "MockStorage"
@@ -424,5 +465,6 @@ end
 return {
   MockStorage = MockStorage,
   validate_bucket = validate_bucket,
-  validate_key = validate_key
+  validate_key = validate_key,
+  FileSystemStorageInterface = FileSystemStorageInterface
 }

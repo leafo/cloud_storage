@@ -22,38 +22,76 @@ validate_key = (key, message="Invalid key (missing or empty string)") ->
     assert chunk != "." and chunk != ".." and chunk\match(VALID_NAME_CHUNK), "Invalid key (unsafe characters)"
   key
 
-mkdir_p = (path) ->
-  current = if path\match "^/" then "/" else ""
-  for part in path\gmatch "[^/]+"
-    current ..= (if current == "" or current == "/" then "" else "/") .. part
-    ok, err = lfs.mkdir current
-    if not ok
-      -- allow existing directories, fail on anything else
-      mode = lfs.attributes current, "mode"
-      assert mode == "directory", err
-  true
+class FileSystemStorageInterface
+  mkdir_p: (path) =>
+    current = if path\match "^/" then "/" else ""
+    for part in path\gmatch "[^/]+"
+      current ..= (if current == "" or current == "/" then "" else "/") .. part
+      ok, err = lfs.mkdir current
+      if not ok
+        -- allow existing directories, fail on anything else
+        mode = lfs.attributes current, "mode"
+        assert mode == "directory", err
+    true
 
-file_stat = (path) ->
-  attr = lfs.attributes path
-  return nil unless attr
-  attr.size, os.date "!%Y-%m-%dT%H:%M:%SZ", attr.modification
+  file_stat: (path) =>
+    attr = lfs.attributes path
+    return nil unless attr
+    {
+      size: attr.size
+      last_modified: os.date "!%Y-%m-%dT%H:%M:%SZ", attr.modification
+    }
 
-list_files = (base_path) ->
-  results = {}
-  scan = (dir, prefix) ->
-    for entry in lfs.dir dir
+  list_dirs: (path) =>
+    out = {}
+    for entry in lfs.dir path
       continue if entry == "." or entry == ".."
-      full = "#{dir}/#{entry}"
-      mode = lfs.attributes full, "mode"
-      if mode == "file"
-        table.insert results, if prefix == "" then entry else "#{prefix}/#{entry}"
-      elseif mode == "directory"
-        scan full, (if prefix == "" then entry else "#{prefix}/#{entry}")
-  scan base_path, ""
-  results
+      full = "#{path}/#{entry}"
+      if lfs.attributes(full, "mode") == "directory"
+        table.insert out, entry
+
+    table.sort out
+    out
+
+  list_files_recursive: (base_path) =>
+    results = {}
+    scan = (dir, prefix) ->
+      for entry in lfs.dir dir
+        continue if entry == "." or entry == ".."
+        full = "#{dir}/#{entry}"
+        mode = lfs.attributes full, "mode"
+        if mode == "file"
+          table.insert results, if prefix == "" then entry else "#{prefix}/#{entry}"
+        elseif mode == "directory"
+          scan full, (if prefix == "" then entry else "#{prefix}/#{entry}")
+
+    scan base_path, ""
+    results
+
+  read_file: (path) =>
+    f = io.open path
+    return nil unless f
+    data = f\read "*a"
+    f\close!
+    data
+
+  write_file: (path, data) =>
+    dir = path\match "(.+)/"
+    @mkdir_p dir if dir
+
+    f = assert io.open(path, "w")
+    assert f\write data
+    f\close!
+    true
+
+  delete_file: (path) =>
+    return nil unless lfs.attributes path, "mode"
+    os.remove path
+    true
 
 class MockStorage
   new: (@dir_name=".", @url_prefix="") =>
+    @fs = FileSystemStorageInterface!
 
   mock_headers: (headers, ctx) =>
     headers
@@ -92,25 +130,24 @@ class MockStorage
 
   get_service: =>
     path = @dir_name
-    mkdir_p path
-    out = {}
-    for entry in lfs.dir path
-      continue if entry == "." or entry == ".."
-      full = "#{path}/#{entry}"
-      if lfs.attributes(full, "mode") == "directory"
-        table.insert out, { name: entry }
-    table.sort out, (a, b) -> a.name < b.name
+    @fs\mkdir_p path
+    out = for entry in *@fs\list_dirs path
+      { name: entry }
     out
 
   get_bucket: (bucket) =>
     validate_bucket bucket
     path = "#{@dir_name}/#{bucket}"
-    mkdir_p path
-    files = list_files path
+    @fs\mkdir_p path
+    files = @fs\list_files_recursive path
     out = for file in *files
       full_path = "#{path}/#{file}"
-      size, last_modified = file_stat full_path
-      { key: file, :size, :last_modified }
+      stat = @fs\file_stat full_path
+      {
+        key: file
+        size: stat and stat.size
+        last_modified: stat and stat.last_modified
+      }
     table.sort out, (a, b) -> a.key < b.key
     out
 
@@ -124,21 +161,13 @@ class MockStorage
     assert type(data) == "string", "expected string for data"
 
     path = @_full_path bucket, key
-    dir = path\match "(.+)/"
-
-    mkdir_p dir if dir
-    f = assert io.open(path, "w")
-    assert f\write data
-    f\close!
+    @fs\write_file path, data
     200
 
   put_file: (bucket, fname, options={}) =>
     validate_bucket bucket
-    data = if f = io.open fname
-      with f\read "*a"
-        f\close!
-    else
-      error "Failed to read file: #{fname}"
+    data = @fs\read_file fname
+    error "Failed to read file: #{fname}" unless data
 
     key = options.key or fname
     if options.key
@@ -158,10 +187,8 @@ class MockStorage
     validate_key dest_key
 
     source_path = @_full_path source_bucket, source_key
-    f = io.open source_path
-    return nil, "File not found: #{source_key}" unless f
-    data = f\read "*a"
-    f\close!
+    data = @fs\read_file source_path
+    return nil, "File not found: #{source_key}" unless data
 
     @put_file_string dest_bucket, dest_key, data
 
@@ -177,10 +204,8 @@ class MockStorage
       validate_key name
 
       source_path = @_full_path bucket, name
-      f = io.open source_path
-      return nil, "File not found: #{name}" unless f
-      data = f\read "*a"
-      f\close!
+      data = @fs\read_file source_path
+      return nil, "File not found: #{name}" unless data
       table.insert chunks, data
 
     @put_file_string bucket, key, table.concat chunks
@@ -189,8 +214,7 @@ class MockStorage
     validate_bucket bucket
     validate_key key, "Invalid key for deletion (missing or empty string)"
     path = @_full_path bucket, key
-    if lfs.attributes path, "mode"
-      os.remove path
+    if @fs\delete_file path
       200
     else
       nil, "File not found: #{key}"
@@ -200,15 +224,15 @@ class MockStorage
     validate_key key
     path = @_full_path bucket, key
 
-    f = io.open path
-    return nil, "File not found: #{key}" unless f
-    data = f\read "*a"
-    f\close!
+    data = @fs\read_file path
+    return nil, "File not found: #{key}" unless data
 
-    size, last_modified = file_stat path
+    stat = @fs\file_stat path
+    size = (stat and stat.size) or #data
+    last_modified = stat and stat.last_modified
     code = 200
     headers = {
-      "Content-length": #data
+      "Content-length": size
       "Last-modified": last_modified
       "x-goog-generation": "mock"
     }
@@ -229,11 +253,10 @@ class MockStorage
     validate_key key
     path = @_full_path bucket, key
 
-    f = io.open path
-    return nil, "File not found: #{key}" unless f
-    f\close!
-
-    size, last_modified = file_stat path
+    stat = @fs\file_stat path
+    return nil, "File not found: #{key}" unless stat
+    size = stat.size
+    last_modified = stat.last_modified
     code = 200
     headers = {
       "Content-length": size
@@ -250,4 +273,4 @@ class MockStorage
     }
     "", code, headers
 
-{ :MockStorage, :validate_bucket, :validate_key }
+{ :MockStorage, :validate_bucket, :validate_key, :FileSystemStorageInterface }
