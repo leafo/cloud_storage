@@ -173,6 +173,53 @@ describe "mock_storage", ->
     assert.same 14, headers["Content-length"]
     assert.truthy headers["Last-modified"]\match "^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ$"
 
+  it "routes response headers through mock_headers hook", ->
+    bucket\put_file_string "some_file.txt", "this is a file"
+    seen = {}
+    storage.mock_headers = (self, headers, ctx) ->
+      table.insert seen, {
+        method: ctx.method
+        bucket: ctx.bucket
+        key: ctx.key
+        path: ctx.path
+        size: ctx.size
+        code: ctx.code
+        has_data: ctx.data != nil
+      }
+      headers["x-test-hook"] = "yes-#{ctx.method}"
+      headers
+
+    get_body, get_code, get_headers = storage\get_file "my_bucket", "some_file.txt"
+    assert.same "this is a file", get_body
+    assert.same 200, get_code
+    assert.same "yes-GET", get_headers["x-test-hook"]
+
+    head_body, head_code, head_headers = storage\head_file "my_bucket", "some_file.txt"
+    assert.same "", head_body
+    assert.same 200, head_code
+    assert.same "yes-HEAD", head_headers["x-test-hook"]
+
+    assert.same {
+      {
+        method: "GET"
+        bucket: "my_bucket"
+        key: "some_file.txt"
+        path: "#{TEST_ROOT}/my_bucket/some_file.txt"
+        size: 14
+        code: 200
+        has_data: true
+      }
+      {
+        method: "HEAD"
+        bucket: "my_bucket"
+        key: "some_file.txt"
+        path: "#{TEST_ROOT}/my_bucket/some_file.txt"
+        size: 14
+        code: 200
+        has_data: false
+      }
+    }, seen
+
   it "returns not found for missing object reads", ->
     assert.same nil, (storage\get_file "my_bucket", "missing.txt")
     assert.same nil, (storage\head_file "my_bucket", "missing.txt")

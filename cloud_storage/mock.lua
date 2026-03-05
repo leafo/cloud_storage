@@ -103,6 +103,9 @@ local MockStorage
 do
   local _class_0
   local _base_0 = {
+    mock_headers = function(self, headers, ctx)
+      return headers
+    end,
     bucket = function(self, bucket)
       validate_bucket(bucket)
       return Bucket(bucket, self)
@@ -348,12 +351,24 @@ do
       end
       local data = f:read("*a")
       f:close()
-      local _, last_modified = file_stat(path)
-      return data, 200, {
+      local size, last_modified = file_stat(path)
+      local code = 200
+      local headers = {
         ["Content-length"] = #data,
         ["Last-modified"] = last_modified,
         ["x-goog-generation"] = "mock"
       }
+      headers = self:mock_headers(headers, {
+        method = "GET",
+        bucket = bucket,
+        key = key,
+        path = path,
+        size = size,
+        last_modified = last_modified,
+        code = code,
+        data = data
+      })
+      return data, code, headers
     end,
     head_file = function(self, bucket, key)
       validate_bucket(bucket)
@@ -365,10 +380,21 @@ do
       end
       f:close()
       local size, last_modified = file_stat(path)
-      return "", 200, {
+      local code = 200
+      local headers = {
         ["Content-length"] = size,
         ["Last-modified"] = last_modified
       }
+      headers = self:mock_headers(headers, {
+        method = "HEAD",
+        bucket = bucket,
+        key = key,
+        path = path,
+        size = size,
+        last_modified = last_modified,
+        code = code
+      })
+      return "", code, headers
     end
   }
   _base_0.__index = _base_0

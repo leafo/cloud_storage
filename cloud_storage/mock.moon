@@ -55,6 +55,9 @@ list_files = (base_path) ->
 class MockStorage
   new: (@dir_name=".", @url_prefix="") =>
 
+  mock_headers: (headers, ctx) =>
+    headers
+
   bucket: (bucket) =>
     validate_bucket bucket
     Bucket bucket, @
@@ -202,12 +205,24 @@ class MockStorage
     data = f\read "*a"
     f\close!
 
-    _, last_modified = file_stat path
-    data, 200, {
+    size, last_modified = file_stat path
+    code = 200
+    headers = {
       "Content-length": #data
       "Last-modified": last_modified
       "x-goog-generation": "mock"
     }
+    headers = @mock_headers headers, {
+      method: "GET"
+      :bucket
+      :key
+      :path
+      :size
+      :last_modified
+      :code
+      :data
+    }
+    data, code, headers
 
   head_file: (bucket, key) =>
     validate_bucket bucket
@@ -219,9 +234,20 @@ class MockStorage
     f\close!
 
     size, last_modified = file_stat path
-    "", 200, {
+    code = 200
+    headers = {
       "Content-length": size
       "Last-modified": last_modified
     }
+    headers = @mock_headers headers, {
+      method: "HEAD"
+      :bucket
+      :key
+      :path
+      :size
+      :last_modified
+      :code
+    }
+    "", code, headers
 
 { :MockStorage, :validate_bucket, :validate_key }
