@@ -150,11 +150,75 @@ do
       end
       os.remove(path)
       return true
+    end,
+    bucket_path = function(self, bucket)
+      if self.root_path == "." or self.root_path == "" then
+        return bucket
+      else
+        return tostring(self.root_path) .. "/" .. tostring(bucket)
+      end
+    end,
+    object_path = function(self, bucket, key)
+      return tostring(self:bucket_path(bucket)) .. "/" .. tostring(key)
+    end,
+    list_buckets = function(self)
+      local root_path
+      if self.root_path == "" then
+        root_path = "."
+      else
+        root_path = self.root_path
+      end
+      self:mkdir_p(root_path)
+      return self:list_dirs(root_path)
+    end,
+    list_bucket_files = function(self, bucket)
+      local path = self:bucket_path(bucket)
+      self:mkdir_p(path)
+      local files = self:list_files_recursive(path)
+      local out
+      do
+        local _accum_0 = { }
+        local _len_0 = 1
+        for _index_0 = 1, #files do
+          local file = files[_index_0]
+          local full_path = tostring(path) .. "/" .. tostring(file)
+          local stat = self:file_stat(full_path)
+          local _value_0 = {
+            key = file,
+            size = stat and stat.size,
+            last_modified = stat and stat.last_modified
+          }
+          _accum_0[_len_0] = _value_0
+          _len_0 = _len_0 + 1
+        end
+        out = _accum_0
+      end
+      table.sort(out, function(a, b)
+        return a.key < b.key
+      end)
+      return out
+    end,
+    read_object = function(self, bucket, key)
+      return self:read_file(self:object_path(bucket, key))
+    end,
+    write_object = function(self, bucket, key, data)
+      return self:write_file(self:object_path(bucket, key), data)
+    end,
+    delete_object = function(self, bucket, key)
+      return self:delete_file(self:object_path(bucket, key))
+    end,
+    stat_object = function(self, bucket, key)
+      return self:file_stat(self:object_path(bucket, key))
     end
   }
   _base_0.__index = _base_0
   _class_0 = setmetatable({
-    __init = function() end,
+    __init = function(self, root_path)
+      if root_path == nil then
+        root_path = "."
+      end
+      self.root_path = root_path
+    end,
     __base = _base_0,
     __name = "FileSystemStorageInterface"
   }, {
@@ -182,13 +246,7 @@ do
     _full_path = function(self, bucket, key)
       validate_bucket(bucket)
       validate_key(key)
-      local dir
-      if self.dir_name == "." then
-        dir = ""
-      else
-        dir = self.dir_name .. "/"
-      end
-      return tostring(dir) .. tostring(bucket) .. "/" .. tostring(key)
+      return self.fs:object_path(bucket, key)
     end,
     bucket_url = function(self, bucket, opts)
       if opts == nil then
@@ -215,13 +273,7 @@ do
         else
           prefix = self.url_prefix .. "/"
         end
-        return prefix .. (function()
-          if self.dir_name == "." then
-            return bucket
-          else
-            return tostring(self.dir_name) .. "/" .. tostring(bucket)
-          end
-        end)()
+        return prefix .. self.fs:bucket_path(bucket)
       end
     end,
     file_url = function(self, bucket, key, opts)
@@ -236,17 +288,15 @@ do
         else
           prefix = self.url_prefix .. "/"
         end
-        return prefix .. self:_full_path(bucket, key)
+        return prefix .. self.fs:object_path(bucket, key)
       end
     end,
     get_service = function(self)
-      local path = self.dir_name
-      self.fs:mkdir_p(path)
       local out
       do
         local _accum_0 = { }
         local _len_0 = 1
-        local _list_0 = self.fs:list_dirs(path)
+        local _list_0 = self.fs:list_buckets()
         for _index_0 = 1, #_list_0 do
           local entry = _list_0[_index_0]
           _accum_0[_len_0] = {
@@ -260,31 +310,7 @@ do
     end,
     get_bucket = function(self, bucket)
       validate_bucket(bucket)
-      local path = tostring(self.dir_name) .. "/" .. tostring(bucket)
-      self.fs:mkdir_p(path)
-      local files = self.fs:list_files_recursive(path)
-      local out
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        for _index_0 = 1, #files do
-          local file = files[_index_0]
-          local full_path = tostring(path) .. "/" .. tostring(file)
-          local stat = self.fs:file_stat(full_path)
-          local _value_0 = {
-            key = file,
-            size = stat and stat.size,
-            last_modified = stat and stat.last_modified
-          }
-          _accum_0[_len_0] = _value_0
-          _len_0 = _len_0 + 1
-        end
-        out = _accum_0
-      end
-      table.sort(out, function(a, b)
-        return a.key < b.key
-      end)
-      return out
+      return self.fs:list_bucket_files(bucket)
     end,
     put_file_string = function(self, bucket, key, data, options)
       if options == nil then
@@ -297,8 +323,7 @@ do
       end
       validate_key(key)
       assert(type(data) == "string", "expected string for data")
-      local path = self:_full_path(bucket, key)
-      self.fs:write_file(path, data)
+      self.fs:write_object(bucket, key, data)
       return 200
     end,
     put_file = function(self, bucket, fname, options)
@@ -337,8 +362,7 @@ do
       validate_key(source_key)
       validate_bucket(dest_bucket)
       validate_key(dest_key)
-      local source_path = self:_full_path(source_bucket, source_key)
-      local data = self.fs:read_file(source_path)
+      local data = self.fs:read_object(source_bucket, source_key)
       if not (data) then
         return nil, "File not found: " .. tostring(source_key)
       end
@@ -362,8 +386,7 @@ do
         end
         assert(name, "missing source key name for compose")
         validate_key(name)
-        local source_path = self:_full_path(bucket, name)
-        local data = self.fs:read_file(source_path)
+        local data = self.fs:read_object(bucket, name)
         if not (data) then
           return nil, "File not found: " .. tostring(name)
         end
@@ -374,8 +397,7 @@ do
     delete_file = function(self, bucket, key)
       validate_bucket(bucket)
       validate_key(key, "Invalid key for deletion (missing or empty string)")
-      local path = self:_full_path(bucket, key)
-      if self.fs:delete_file(path) then
+      if self.fs:delete_object(bucket, key) then
         return 200
       else
         return nil, "File not found: " .. tostring(key)
@@ -384,12 +406,12 @@ do
     get_file = function(self, bucket, key)
       validate_bucket(bucket)
       validate_key(key)
-      local path = self:_full_path(bucket, key)
-      local data = self.fs:read_file(path)
+      local path = self.fs:object_path(bucket, key)
+      local data = self.fs:read_object(bucket, key)
       if not (data) then
         return nil, "File not found: " .. tostring(key)
       end
-      local stat = self.fs:file_stat(path)
+      local stat = self.fs:stat_object(bucket, key)
       local size = (stat and stat.size) or #data
       local last_modified = stat and stat.last_modified
       local code = 200
@@ -413,8 +435,8 @@ do
     head_file = function(self, bucket, key)
       validate_bucket(bucket)
       validate_key(key)
-      local path = self:_full_path(bucket, key)
-      local stat = self.fs:file_stat(path)
+      local path = self.fs:object_path(bucket, key)
+      local stat = self.fs:stat_object(bucket, key)
       if not (stat) then
         return nil, "File not found: " .. tostring(key)
       end
@@ -439,15 +461,15 @@ do
   }
   _base_0.__index = _base_0
   _class_0 = setmetatable({
-    __init = function(self, dir_name, url_prefix)
-      if dir_name == nil then
-        dir_name = "."
+    __init = function(self, root_path, url_prefix)
+      if root_path == nil then
+        root_path = "."
       end
       if url_prefix == nil then
         url_prefix = ""
       end
-      self.dir_name, self.url_prefix = dir_name, url_prefix
-      self.fs = FileSystemStorageInterface()
+      self.url_prefix = url_prefix
+      self.fs = FileSystemStorageInterface(root_path)
     end,
     __base = _base_0,
     __name = "MockStorage"

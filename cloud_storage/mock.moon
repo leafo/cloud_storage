@@ -23,6 +23,8 @@ validate_key = (key, message="Invalid key (missing or empty string)") ->
   key
 
 class FileSystemStorageInterface
+  new: (@root_path=".") =>
+
   mkdir_p: (path) =>
     current = if path\match "^/" then "/" else ""
     for part in path\gmatch "[^/]+"
@@ -89,9 +91,51 @@ class FileSystemStorageInterface
     os.remove path
     true
 
+  bucket_path: (bucket) =>
+    if @root_path == "." or @root_path == ""
+      bucket
+    else
+      "#{@root_path}/#{bucket}"
+
+  object_path: (bucket, key) =>
+    "#{@bucket_path(bucket)}/#{key}"
+
+  list_buckets: =>
+    root_path = if @root_path == "" then "." else @root_path
+    @mkdir_p root_path
+    @list_dirs root_path
+
+  list_bucket_files: (bucket) =>
+    path = @bucket_path bucket
+    @mkdir_p path
+    files = @list_files_recursive path
+    out = for file in *files
+      full_path = "#{path}/#{file}"
+      stat = @file_stat full_path
+      {
+        key: file
+        size: stat and stat.size
+        last_modified: stat and stat.last_modified
+      }
+
+    table.sort out, (a, b) -> a.key < b.key
+    out
+
+  read_object: (bucket, key) =>
+    @read_file @object_path bucket, key
+
+  write_object: (bucket, key, data) =>
+    @write_file @object_path(bucket, key), data
+
+  delete_object: (bucket, key) =>
+    @delete_file @object_path(bucket, key)
+
+  stat_object: (bucket, key) =>
+    @file_stat @object_path bucket, key
+
 class MockStorage
-  new: (@dir_name=".", @url_prefix="") =>
-    @fs = FileSystemStorageInterface!
+  new: (root_path=".", @url_prefix="") =>
+    @fs = FileSystemStorageInterface root_path
 
   mock_headers: (headers, ctx) =>
     headers
@@ -103,8 +147,7 @@ class MockStorage
   _full_path: (bucket, key) =>
     validate_bucket bucket
     validate_key key
-    dir = if @dir_name == "." then "" else @dir_name .. "/"
-    "#{dir}#{bucket}/#{key}"
+    @fs\object_path bucket, key
 
   bucket_url: (bucket, opts={}) =>
     validate_bucket bucket
@@ -117,7 +160,7 @@ class MockStorage
         "#{scheme}://#{base}/#{bucket}"
     else
       prefix = if @url_prefix == "" then "" else @url_prefix .. "/"
-      prefix .. if @dir_name == "." then bucket else "#{@dir_name}/#{bucket}"
+      prefix .. @fs\bucket_path bucket
 
   file_url: (bucket, key, opts) =>
     validate_bucket bucket
@@ -126,30 +169,16 @@ class MockStorage
       "#{@bucket_url bucket, opts}/#{key}"
     else
       prefix = if @url_prefix == "" then "" else @url_prefix .. "/"
-      prefix .. @_full_path bucket, key
+      prefix .. @fs\object_path(bucket, key)
 
   get_service: =>
-    path = @dir_name
-    @fs\mkdir_p path
-    out = for entry in *@fs\list_dirs path
+    out = for entry in *@fs\list_buckets!
       { name: entry }
     out
 
   get_bucket: (bucket) =>
     validate_bucket bucket
-    path = "#{@dir_name}/#{bucket}"
-    @fs\mkdir_p path
-    files = @fs\list_files_recursive path
-    out = for file in *files
-      full_path = "#{path}/#{file}"
-      stat = @fs\file_stat full_path
-      {
-        key: file
-        size: stat and stat.size
-        last_modified: stat and stat.last_modified
-      }
-    table.sort out, (a, b) -> a.key < b.key
-    out
+    @fs\list_bucket_files bucket
 
   put_file_string: (bucket, key, data, options={}) =>
     validate_bucket bucket
@@ -160,8 +189,7 @@ class MockStorage
     validate_key key
     assert type(data) == "string", "expected string for data"
 
-    path = @_full_path bucket, key
-    @fs\write_file path, data
+    @fs\write_object bucket, key, data
     200
 
   put_file: (bucket, fname, options={}) =>
@@ -186,8 +214,7 @@ class MockStorage
     validate_bucket dest_bucket
     validate_key dest_key
 
-    source_path = @_full_path source_bucket, source_key
-    data = @fs\read_file source_path
+    data = @fs\read_object source_bucket, source_key
     return nil, "File not found: #{source_key}" unless data
 
     @put_file_string dest_bucket, dest_key, data
@@ -203,8 +230,7 @@ class MockStorage
       assert name, "missing source key name for compose"
       validate_key name
 
-      source_path = @_full_path bucket, name
-      data = @fs\read_file source_path
+      data = @fs\read_object bucket, name
       return nil, "File not found: #{name}" unless data
       table.insert chunks, data
 
@@ -213,8 +239,7 @@ class MockStorage
   delete_file: (bucket, key) =>
     validate_bucket bucket
     validate_key key, "Invalid key for deletion (missing or empty string)"
-    path = @_full_path bucket, key
-    if @fs\delete_file path
+    if @fs\delete_object bucket, key
       200
     else
       nil, "File not found: #{key}"
@@ -222,12 +247,11 @@ class MockStorage
   get_file: (bucket, key) =>
     validate_bucket bucket
     validate_key key
-    path = @_full_path bucket, key
-
-    data = @fs\read_file path
+    path = @fs\object_path bucket, key
+    data = @fs\read_object bucket, key
     return nil, "File not found: #{key}" unless data
 
-    stat = @fs\file_stat path
+    stat = @fs\stat_object bucket, key
     size = (stat and stat.size) or #data
     last_modified = stat and stat.last_modified
     code = 200
@@ -251,9 +275,8 @@ class MockStorage
   head_file: (bucket, key) =>
     validate_bucket bucket
     validate_key key
-    path = @_full_path bucket, key
-
-    stat = @fs\file_stat path
+    path = @fs\object_path bucket, key
+    stat = @fs\stat_object bucket, key
     return nil, "File not found: #{key}" unless stat
     size = stat.size
     last_modified = stat.last_modified
