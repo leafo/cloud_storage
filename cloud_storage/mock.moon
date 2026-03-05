@@ -1,15 +1,36 @@
 
 import Bucket from require "cloud_storage.google"
+lfs = require "lfs"
 
-shell_escape = (str) ->
-  str\gsub "'", "''"
+mkdir_p = (path) ->
+  current = if path\match "^/" then "/" else ""
+  for part in path\gmatch "[^/]+"
+    current ..= (if current == "" or current == "/" then "" else "/") .. part
+    ok, err = lfs.mkdir current
+    if not ok
+      -- allow existing directories, fail on anything else
+      mode = lfs.attributes current, "mode"
+      assert mode == "directory", err
+  true
 
-execute = (cmd) ->
-  -- print "RUN: #{cmd}"
-  proc = io.popen cmd
-  out = proc\read "*a"
-  proc\close!
-  out\match "^(.-)%s*$"
+file_stat = (path) ->
+  attr = lfs.attributes path
+  return nil unless attr
+  attr.size, os.date "!%Y-%m-%dT%H:%M:%SZ", attr.modification
+
+list_files = (base_path) ->
+  results = {}
+  scan = (dir, prefix) ->
+    for entry in lfs.dir dir
+      continue if entry == "." or entry == ".."
+      full = "#{dir}/#{entry}"
+      mode = lfs.attributes full, "mode"
+      if mode == "file"
+        table.insert results, if prefix == "" then entry else "#{prefix}/#{entry}"
+      elseif mode == "directory"
+        scan full, (if prefix == "" then entry else "#{prefix}/#{entry}")
+  scan base_path, ""
+  results
 
 class MockStorage
   new: (@dir_name=".", @url_prefix="") =>
@@ -20,36 +41,63 @@ class MockStorage
     dir = if @dir_name == "." then "" else @dir_name .. "/"
     "#{dir}#{bucket}/#{key}"
 
-  file_url: (bucket, key) =>
-    prefix = if @url_prefix == "" then "" else @url_prefix .. "/"
-    prefix .. @_full_path bucket, key
+  bucket_url: (bucket, opts={}) =>
+    if opts.scheme or opts.subdomain
+      scheme = opts.scheme or "https"
+      base = if @url_prefix == "" then "localhost" else @url_prefix
+      if opts.subdomain
+        "#{scheme}://#{bucket}.#{base}"
+      else
+        "#{scheme}://#{base}/#{bucket}"
+    else
+      prefix = if @url_prefix == "" then "" else @url_prefix .. "/"
+      prefix .. if @dir_name == "." then bucket else "#{@dir_name}/#{bucket}"
 
-  get_service: => error "Not implemented"
+  file_url: (bucket, key, opts) =>
+    if opts and (opts.scheme or opts.subdomain)
+      "#{@bucket_url bucket, opts}/#{key}"
+    else
+      prefix = if @url_prefix == "" then "" else @url_prefix .. "/"
+      prefix .. @_full_path bucket, key
+
+  get_service: =>
+    path = @dir_name
+    mkdir_p path
+    out = {}
+    for entry in lfs.dir path
+      continue if entry == "." or entry == ".."
+      full = "#{path}/#{entry}"
+      if lfs.attributes(full, "mode") == "directory"
+        table.insert out, { name: entry }
+    table.sort out, (a, b) -> a.name < b.name
+    out
 
   get_bucket: (bucket) =>
     path = "#{@dir_name}/#{bucket}"
-    execute "mkdir -p '#{shell_escape path}'"
-    escaped_path = "$(echo '#{shell_escape path}' | sed -e 's/[\\/&]/\\\\&/g')"
-    cmd = 'find "'..shell_escape(path)..'" -type f | sed -e "s/^'..escaped_path..'//"'
-    files = execute cmd
-    return for file in files\gmatch "[^\n]+"
-      { key: file\match "/?(.*)" }
+    mkdir_p path
+    files = list_files path
+    out = for file in *files
+      full_path = "#{path}/#{file}"
+      size, last_modified = file_stat full_path
+      { key: file, :size, :last_modified }
+    table.sort out, (a, b) -> a.key < b.key
+    out
 
   put_file_string: (bucket, key, data, options={}) =>
     assert not options.key, "key is not an option, but an argument"
     if type(data) == "table"
       error "put_file_string interface has changed: key is now the second argument"
 
-    assert key, "missing key"
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
     assert type(data) == "string", "expected string for data"
 
     path = @_full_path bucket, key
-    dir = execute "dirname '#{shell_escape path}'"
+    dir = path\match "(.+)/"
 
-    execute "mkdir -p '#{shell_escape dir}'"
-    with io.open path, "w"
-      \write data
-      \close!
+    mkdir_p dir if dir
+    f = assert io.open(path, "w")
+    assert f\write data
+    f\close!
     200
 
   put_file: (bucket, fname, options={}) =>
@@ -66,11 +114,39 @@ class MockStorage
     @put_file_string bucket, key, data, options
 
   delete_file: (bucket, key) =>
+    assert type(key) == "string" and key != "", "Invalid key for deletion (missing or empty string)"
     path = @_full_path bucket, key
-    os.execute "[ -a '#{shell_escape path}' ] && rm '#{shell_escape path}'"
+    os.remove path
     200
 
-  get_file: (bucket, key) => error "not implemented"
-  head_file: (bucket, key) => error "Not implemented"
+  get_file: (bucket, key) =>
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
+    path = @_full_path bucket, key
+
+    f = io.open path
+    return nil, "File not found: #{key}" unless f
+    data = f\read "*a"
+    f\close!
+
+    _, last_modified = file_stat path
+    data, 200, {
+      "Content-length": #data
+      "Last-modified": last_modified
+      "x-goog-generation": "mock"
+    }
+
+  head_file: (bucket, key) =>
+    assert type(key) == "string" and key != "", "Invalid key (missing or empty string)"
+    path = @_full_path bucket, key
+
+    f = io.open path
+    return nil, "File not found: #{key}" unless f
+    f\close!
+
+    size, last_modified = file_stat path
+    "", 200, {
+      "Content-length": size
+      "Last-modified": last_modified
+    }
 
 { :MockStorage }

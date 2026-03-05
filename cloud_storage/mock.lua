@@ -1,15 +1,78 @@
 local Bucket
 Bucket = require("cloud_storage.google").Bucket
-local shell_escape
-shell_escape = function(str)
-  return str:gsub("'", "''")
+local lfs = require("lfs")
+local mkdir_p
+mkdir_p = function(path)
+  local current
+  if path:match("^/") then
+    current = "/"
+  else
+    current = ""
+  end
+  for part in path:gmatch("[^/]+") do
+    current = current .. (((function()
+      if current == "" or current == "/" then
+        return ""
+      else
+        return "/"
+      end
+    end)()) .. part)
+    local ok, err = lfs.mkdir(current)
+    if not ok then
+      local mode = lfs.attributes(current, "mode")
+      assert(mode == "directory", err)
+    end
+  end
+  return true
 end
-local execute
-execute = function(cmd)
-  local proc = io.popen(cmd)
-  local out = proc:read("*a")
-  proc:close()
-  return out:match("^(.-)%s*$")
+local file_stat
+file_stat = function(path)
+  local attr = lfs.attributes(path)
+  if not (attr) then
+    return nil
+  end
+  return attr.size, os.date("!%Y-%m-%dT%H:%M:%SZ", attr.modification)
+end
+local list_files
+list_files = function(base_path)
+  local results = { }
+  local scan
+  scan = function(dir, prefix)
+    for entry in lfs.dir(dir) do
+      local _continue_0 = false
+      repeat
+        if entry == "." or entry == ".." then
+          _continue_0 = true
+          break
+        end
+        local full = tostring(dir) .. "/" .. tostring(entry)
+        local mode = lfs.attributes(full, "mode")
+        if mode == "file" then
+          table.insert(results, (function()
+            if prefix == "" then
+              return entry
+            else
+              return tostring(prefix) .. "/" .. tostring(entry)
+            end
+          end)())
+        elseif mode == "directory" then
+          scan(full, ((function()
+            if prefix == "" then
+              return entry
+            else
+              return tostring(prefix) .. "/" .. tostring(entry)
+            end
+          end)()))
+        end
+        _continue_0 = true
+      until true
+      if not _continue_0 then
+        break
+      end
+    end
+  end
+  scan(base_path, "")
+  return results
 end
 local MockStorage
 do
@@ -27,35 +90,106 @@ do
       end
       return tostring(dir) .. tostring(bucket) .. "/" .. tostring(key)
     end,
-    file_url = function(self, bucket, key)
-      local prefix
-      if self.url_prefix == "" then
-        prefix = ""
-      else
-        prefix = self.url_prefix .. "/"
+    bucket_url = function(self, bucket, opts)
+      if opts == nil then
+        opts = { }
       end
-      return prefix .. self:_full_path(bucket, key)
+      if opts.scheme or opts.subdomain then
+        local scheme = opts.scheme or "https"
+        local base
+        if self.url_prefix == "" then
+          base = "localhost"
+        else
+          base = self.url_prefix
+        end
+        if opts.subdomain then
+          return tostring(scheme) .. "://" .. tostring(bucket) .. "." .. tostring(base)
+        else
+          return tostring(scheme) .. "://" .. tostring(base) .. "/" .. tostring(bucket)
+        end
+      else
+        local prefix
+        if self.url_prefix == "" then
+          prefix = ""
+        else
+          prefix = self.url_prefix .. "/"
+        end
+        return prefix .. (function()
+          if self.dir_name == "." then
+            return bucket
+          else
+            return tostring(self.dir_name) .. "/" .. tostring(bucket)
+          end
+        end)()
+      end
+    end,
+    file_url = function(self, bucket, key, opts)
+      if opts and (opts.scheme or opts.subdomain) then
+        return tostring(self:bucket_url(bucket, opts)) .. "/" .. tostring(key)
+      else
+        local prefix
+        if self.url_prefix == "" then
+          prefix = ""
+        else
+          prefix = self.url_prefix .. "/"
+        end
+        return prefix .. self:_full_path(bucket, key)
+      end
     end,
     get_service = function(self)
-      return error("Not implemented")
+      local path = self.dir_name
+      mkdir_p(path)
+      local out = { }
+      for entry in lfs.dir(path) do
+        local _continue_0 = false
+        repeat
+          if entry == "." or entry == ".." then
+            _continue_0 = true
+            break
+          end
+          local full = tostring(path) .. "/" .. tostring(entry)
+          if lfs.attributes(full, "mode") == "directory" then
+            table.insert(out, {
+              name = entry
+            })
+          end
+          _continue_0 = true
+        until true
+        if not _continue_0 then
+          break
+        end
+      end
+      table.sort(out, function(a, b)
+        return a.name < b.name
+      end)
+      return out
     end,
     get_bucket = function(self, bucket)
       local path = tostring(self.dir_name) .. "/" .. tostring(bucket)
-      execute("mkdir -p '" .. tostring(shell_escape(path)) .. "'")
-      local escaped_path = "$(echo '" .. tostring(shell_escape(path)) .. "' | sed -e 's/[\\/&]/\\\\&/g')"
-      local cmd = 'find "' .. shell_escape(path) .. '" -type f | sed -e "s/^' .. escaped_path .. '//"'
-      local files = execute(cmd)
-      return (function()
+      mkdir_p(path)
+      local files = list_files(path)
+      local out
+      do
         local _accum_0 = { }
         local _len_0 = 1
-        for file in files:gmatch("[^\n]+") do
-          _accum_0[_len_0] = {
-            key = file:match("/?(.*)")
+        for _index_0 = 1, #files do
+          local file = files[_index_0]
+          local full_path = tostring(path) .. "/" .. tostring(file)
+          local size, last_modified = file_stat(full_path)
+          local _value_0 = {
+            key = file,
+            size = size,
+            last_modified = last_modified
           }
+          _accum_0[_len_0] = _value_0
           _len_0 = _len_0 + 1
         end
-        return _accum_0
-      end)()
+        out = _accum_0
+      end
+      table.sort(out, function(a, b)
+        return a.key < b.key
+      end)
+      return out
     end,
     put_file_string = function(self, bucket, key, data, options)
       if options == nil then
@@ -65,16 +199,16 @@ do
       if type(data) == "table" then
         error("put_file_string interface has changed: key is now the second argument")
       end
-      assert(key, "missing key")
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
       assert(type(data) == "string", "expected string for data")
       local path = self:_full_path(bucket, key)
-      local dir = execute("dirname '" .. tostring(shell_escape(path)) .. "'")
-      execute("mkdir -p '" .. tostring(shell_escape(dir)) .. "'")
-      do
-        local _with_0 = io.open(path, "w")
-        _with_0:write(data)
-        _with_0:close()
+      local dir = path:match("(.+)/")
+      if dir then
+        mkdir_p(dir)
       end
+      local f = assert(io.open(path, "w"))
+      assert(f:write(data))
+      f:close()
       return 200
     end,
     put_file = function(self, bucket, fname, options)
@@ -109,15 +243,40 @@ do
       return self:put_file_string(bucket, key, data, options)
     end,
     delete_file = function(self, bucket, key)
+      assert(type(key) == "string" and key ~= "", "Invalid key for deletion (missing or empty string)")
       local path = self:_full_path(bucket, key)
-      os.execute("[ -a '" .. tostring(shell_escape(path)) .. "' ] && rm '" .. tostring(shell_escape(path)) .. "'")
+      os.remove(path)
       return 200
     end,
     get_file = function(self, bucket, key)
-      return error("not implemented")
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
+      local path = self:_full_path(bucket, key)
+      local f = io.open(path)
+      if not (f) then
+        return nil, "File not found: " .. tostring(key)
+      end
+      local data = f:read("*a")
+      f:close()
+      local _, last_modified = file_stat(path)
+      return data, 200, {
+        ["Content-length"] = #data,
+        ["Last-modified"] = last_modified,
+        ["x-goog-generation"] = "mock"
+      }
     end,
     head_file = function(self, bucket, key)
-      return error("Not implemented")
+      assert(type(key) == "string" and key ~= "", "Invalid key (missing or empty string)")
+      local path = self:_full_path(bucket, key)
+      local f = io.open(path)
+      if not (f) then
+        return nil, "File not found: " .. tostring(key)
+      end
+      f:close()
+      local size, last_modified = file_stat(path)
+      return "", 200, {
+        ["Content-length"] = size,
+        ["Last-modified"] = last_modified
+      }
     end
   }
   _base_0.__index = _base_0
