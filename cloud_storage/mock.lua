@@ -276,6 +276,57 @@ do
       end
       return self:put_file_string(bucket, key, data, options)
     end,
+    put_file_acl = function(self, bucket, key, acl)
+      validate_bucket(bucket)
+      validate_key(key)
+      return error("Not implemented in MockStorage")
+    end,
+    copy_file = function(self, source_bucket, source_key, dest_bucket, dest_key, options)
+      if options == nil then
+        options = { }
+      end
+      validate_bucket(source_bucket)
+      validate_key(source_key)
+      validate_bucket(dest_bucket)
+      validate_key(dest_key)
+      local source_path = self:_full_path(source_bucket, source_key)
+      local f = io.open(source_path)
+      if not (f) then
+        return nil, "File not found: " .. tostring(source_key)
+      end
+      local data = f:read("*a")
+      f:close()
+      return self:put_file_string(dest_bucket, dest_key, data)
+    end,
+    compose = function(self, bucket, key, source_keys, options)
+      if options == nil then
+        options = { }
+      end
+      validate_bucket(bucket)
+      validate_key(key)
+      assert(type(source_keys) == "table" and next(source_keys), "invalid source keys")
+      local chunks = { }
+      for _index_0 = 1, #source_keys do
+        local key_obj = source_keys[_index_0]
+        local name
+        if type(key_obj) == "table" then
+          name = key_obj.name
+        else
+          name = key_obj
+        end
+        assert(name, "missing source key name for compose")
+        validate_key(name)
+        local source_path = self:_full_path(bucket, name)
+        local f = io.open(source_path)
+        if not (f) then
+          return nil, "File not found: " .. tostring(name)
+        end
+        local data = f:read("*a")
+        f:close()
+        table.insert(chunks, data)
+      end
+      return self:put_file_string(bucket, key, table.concat(chunks))
+    end,
     delete_file = function(self, bucket, key)
       validate_bucket(bucket)
       validate_key(key, "Invalid key for deletion (missing or empty string)")

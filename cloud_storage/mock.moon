@@ -143,6 +143,45 @@ class MockStorage
 
     @put_file_string bucket, key, data, options
 
+  put_file_acl: (bucket, key, acl) =>
+    validate_bucket bucket
+    validate_key key
+    error "Not implemented in MockStorage"
+
+  copy_file: (source_bucket, source_key, dest_bucket, dest_key, options={}) =>
+    validate_bucket source_bucket
+    validate_key source_key
+    validate_bucket dest_bucket
+    validate_key dest_key
+
+    source_path = @_full_path source_bucket, source_key
+    f = io.open source_path
+    return nil, "File not found: #{source_key}" unless f
+    data = f\read "*a"
+    f\close!
+
+    @put_file_string dest_bucket, dest_key, data
+
+  compose: (bucket, key, source_keys, options={}) =>
+    validate_bucket bucket
+    validate_key key
+    assert type(source_keys) == "table" and next(source_keys), "invalid source keys"
+
+    chunks = {}
+    for key_obj in *source_keys
+      name = if type(key_obj) == "table" then key_obj.name else key_obj
+      assert name, "missing source key name for compose"
+      validate_key name
+
+      source_path = @_full_path bucket, name
+      f = io.open source_path
+      return nil, "File not found: #{name}" unless f
+      data = f\read "*a"
+      f\close!
+      table.insert chunks, data
+
+    @put_file_string bucket, key, table.concat chunks
+
   delete_file: (bucket, key) =>
     validate_bucket bucket
     validate_key key, "Invalid key for deletion (missing or empty string)"

@@ -84,6 +84,62 @@ describe "mock_storage", ->
     assert.same 200, bucket\put_file source_path, key: "cool/thing.lua"
     assert.same {"cool/thing.lua"}, list_keys bucket\list!
 
+  it "put_file_acl is explicitly not implemented", ->
+    bucket\put_file_string "some_file.txt", "this is a file"
+    assert.has_error(
+      -> storage\put_file_acl "my_bucket", "some_file.txt", "private"
+      "Not implemented in MockStorage"
+    )
+
+  it "copies files across buckets", ->
+    assert.same 200, storage\put_file_string "source_bucket", "path/from.txt", "copy me"
+    assert.same 200, storage\copy_file "source_bucket", "path/from.txt", "dest_bucket", "path/to.txt"
+
+    body, code = storage\get_file "dest_bucket", "path/to.txt"
+    assert.same "copy me", body
+    assert.same 200, code
+
+  it "copy_file returns nil for missing source", ->
+    copied, err = storage\copy_file "source_bucket", "missing.txt", "dest_bucket", "out.txt"
+    assert.same nil, copied
+    assert.same "File not found: missing.txt", err
+
+  it "composes files in order", ->
+    storage\put_file_string "my_bucket", "part1.txt", "hello "
+    storage\put_file_string "my_bucket", "part2.txt", "world"
+    storage\put_file_string "my_bucket", "part3.txt", "!"
+
+    assert.same 200, storage\compose "my_bucket", "joined.txt", {
+      "part1.txt"
+      { name: "part2.txt" }
+      "part3.txt"
+    }
+
+    body, code = storage\get_file "my_bucket", "joined.txt"
+    assert.same "hello world!", body
+    assert.same 200, code
+
+  it "compose validates source list and source names", ->
+    assert.has_error(
+      -> storage\compose "my_bucket", "joined.txt", {}
+      "invalid source keys"
+    )
+    assert.has_error(
+      -> storage\compose "my_bucket", "joined.txt", {
+        { generation: "123" }
+      }
+      "missing source key name for compose"
+    )
+
+  it "compose returns nil when a source file is missing", ->
+    storage\put_file_string "my_bucket", "part1.txt", "hello "
+    out, err = storage\compose "my_bucket", "joined.txt", {
+      "part1.txt"
+      "missing.txt"
+    }
+    assert.same nil, out
+    assert.same "File not found: missing.txt", err
+
   it "lists buckets from get_service", ->
     assert.same {}, storage\get_service!
     bucket\put_file_string "hello.txt", "world"
